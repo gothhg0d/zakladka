@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+ <description>
+  <title-info>
+   <genre>prose_contemporary</genre>
+   <author><first-name>Ирина</first-name><last-name>Заречная</last-name></author>
+   <book-title>Дом у реки</book-title>
+   <annotation><p>Небольшая повесть для тестирования читалки.</p></annotation>
+   <date value="2026-11-03">2026</date>
+   <coverpage><image l:href="#cover.png"/></coverpage>
+   <lang>ru</lang>
+  </title-info>
+  <document-info>
+   <author><nickname>zakladka</nickname></author>
+   <program-used>python gen.py</program-used>
+   <date value="2026-11-03">3 ноября 2026</date>
+   <id>5b7958d0-0a1f-4e6b-9c3d-d0a1e2b3c4f5</id>
+   <version>1.0</version>
+  </document-info>
+ </description>
+ <body>
+  <title><p>Ирина Заречная</p><p>Дом у реки</p></title>
+  <section id="ch1">
+   <title><p>Глава 1</p><p>Письмо</p></title>
+   <p>Дом стоял у самой реки, так близко, что весной вода подходила к нижней ступеньке крыльца и тихо стучала в доски, будто просилась войти. Его построил ещё прадед Веры, и с тех пор дом пережил три наводнения, две войны и бесчисленное множество семейных ссор, которые, как и наводнения, приходили внезапно и уходили, оставляя после себя ил и тишину.</p>
+   <p>Вера не была здесь одиннадцать лет. Она уехала в город сразу после школы, поступила в институт, потом устроилась работать в архив и почти забыла, как пахнет речная вода в начале октября — сыростью, палой листвой и чем-то металлическим, похожим на запах старых монет.</p>
+   <p>Письмо от тёти Нины пришло в понедельник. Конверт был надписан аккуратным учительским почерком, а внутри лежал один листок, сложенный вчетверо.</p>
+   <p>«Верочка, — писала тётя, — дом продают. Я больше не могу за ним смотреть, а покупатель нашёлся быстро. Если хочешь что-то забрать на память, приезжай до конца месяца. Ключ под камнем, как всегда».</p>
+   <p>Вера перечитала письмо трижды. Потом позвонила начальнице и попросила неделю за свой счёт.</p>
+   <p>— Что-то случилось? — спросила Ольга Петровна.</p>
+   <p>— Нет, — ответила Вера. — То есть да. Мне нужно съездить домой.</p>
+   <p>Она сама удивилась, что назвала этот дом своим. В городе у неё была съёмная квартира с видом на парковку, кактус на подоконнике и привычка пить чай стоя, у окна. Дом у реки казался чем-то из другой жизни, из книги, которую читаешь в детстве и потом не можешь вспомнить, чем она кончилась.</p>
+   <p>Электричка шла четыре часа. За окном тянулись поля, перелески, редкие станции с облупленными вывесками. На одной из них в вагон вошёл старик с корзиной яблок и сел напротив.</p>
+   <p>— К реке едете? — спросил он, хотя Вера ничего не говорила.</p>
+   <p>— Как вы догадались?</p>
+   <p>— Все, кто едет до конечной, едут к реке, — улыбнулся старик. — Больше там ничего нет. Только река и дома, которые она пока не забрала.</p>
+   <p>Он протянул ей яблоко. Оно было холодным и твёрдым, с красным боком и зелёной тенью у черенка. Вера взяла его и почему-то не смогла съесть, так и держала в руках до самой станции.</p>
+   <p>Ключ действительно лежал под плоским серым камнем у калитки. Замок поддался не сразу, пришлось навалиться плечом. Дверь открылась со вздохом, и Веру встретил запах — пыль, сушёная мята, старое дерево. Всё было на своих местах: часы с кукушкой, давно остановившиеся на без четверти три, вышитая скатерть, фотографии на стене.</p>
+   <p>Вера села на табурет у печки и долго не двигалась. Где-то за стеной шумела река — ровно, терпеливо, как шумела все эти годы, пока её никто не слушал.</p>
+  </section>
+  <section id="ch2">
+   <title><p>Глава 2</p><p>Старая лодка</p></title>
+   <p>Утром Вера проснулась от крика чаек. Она не сразу поняла, где находится: потолок был слишком низким, а свет — слишком жёлтым. Потом вспомнила и улыбнулась, впервые за много месяцев улыбнулась просто так, без всякой причины.</p>
+   <p>Она решила начать с сарая. Тётя Нина говорила, что там «один хлам», но Вера помнила, что именно в сарае дед хранил самое интересное: рыболовные снасти, банки с гвоздями, разобранный радиоприёмник и лодку.</p>
+   <p>Лодка оказалась на месте. Она лежала вверх дном на двух козлах, накрытая брезентом, из-под которого торчал облупленный голубой борт. Вера стянула брезент, и в воздух поднялось облако пыли.</p>
+   <subtitle>Надпись на борту</subtitle>
+   <p>На корме выцветшими белыми буквами было написано: «Ласточка». Вера провела пальцем по буквам и вспомнила, как дед подкрашивал их каждую весну, высунув от усердия кончик языка, а она сидела рядом на перевёрнутом ведре и подавала ему кисточку.</p>
+   <image l:href="#fig.png"/>
+   <p>Рисунок 1. Лодка «Ласточка» на воде</p>
+   <p>— Ну и находка, — раздалось за спиной.</p>
+   <p>Вера обернулась. В дверях сарая стоял мужчина лет сорока в резиновых сапогах и выцветшей штормовке. Лицо у него было обветренное, а глаза — светлые, почти прозрачные, как вода на мелководье.</p>
+   <p>— Простите, вы кто? — спросила Вера.</p>
+   <p>— Андрей. Сосед. Я через два дома живу, где синие ставни. Тётя ваша просила приглядывать, пока вы не приедете.</p>
+   <p>— Вы знали, что я приеду?</p>
+   <p>— Она была уверена, — пожал плечами Андрей. — Сказала: Вера всегда возвращается, просто не сразу.</p>
+   <p>Он подошёл ближе и постучал костяшками пальцев по днищу лодки. Звук был глухой, плотный.</p>
+   <p>— Крепкая, — сказал он. — Ваш дед знал толк. Если проконопатить и покрасить, ещё походит.</p>
+   <p>— Её же продадут вместе с домом.</p>
+   <p>— А вы не продавайте, — просто сказал Андрей.</p>
+   <p>Вера хотела ответить, что это не её решение, что у неё работа, квартира, кактус, что она давно уже городской человек. Но слова почему-то не шли. Она смотрела на «Ласточку» и думала о том, что <emphasis>некоторые вещи нельзя продать — их можно только оставить</emphasis>.</p>
+   <p>Весь день они провозились с лодкой. Андрей принёс паклю, смолу и старую кисть, Вера отыскала в доме банку голубой краски, засохшей только сверху. К вечеру «Ласточка» стояла на козлах, пахнущая смолой и свежестью, и казалась моложе лет на двадцать.</p>
+   <p>— Завтра спустим на воду, — сказал Андрей, вытирая руки ветошью. — Проверим, не течёт ли.</p>
+   <p>— А если течёт?</p>
+   <p>— Тогда будем чинить дальше. Спешить ведь некуда?</p>
+   <p>Он ушёл, насвистывая, а Вера ещё долго стояла у сарая. Ей вдруг вспомнилось, как дед учил её грести: не силой, а терпением, длинным ровным движением, чтобы весло входило в воду без брызг. «Река не любит суеты, — говорил он. — Она сама донесёт, если ты ей не мешаешь».</p>
+   <p>Вера посмотрела на реку. Солнце садилось за дальний берег, и вода из серой становилась розовой, потом золотой, потом тёмно-синей. Спешить действительно было некуда.</p>
+  </section>
+  <section id="ch3">
+   <title><p>Глава 3</p><p>Половодье</p></title>
+   <p>Ночью начался дождь. Он шёл долго, без перерыва, барабанил по крыше и стекал по окнам ровными струями. Вера лежала без сна и слушала, как река за стеной становится громче.</p>
+   <p>К утру вода поднялась на полметра. Она залила нижний огород и подступила к сараю. Вера выбежала на крыльцо в дедовом плаще, который нашла на вешалке, и увидела Андрея — он уже стоял по колено в воде у дверей сарая.</p>
+   <p>— Лодку надо вывести! — крикнул он. — Иначе её прижмёт к стене!</p>
+   <p>Вдвоём они сняли «Ласточку» с козел и вытолкали наружу. Лодка закачалась на мутной воде, и Вера, сама не понимая как, оказалась внутри, с веслом в руках.</p>
+   <p>— Не течёт! — засмеялась она. — Андрей, она не течёт!</p>
+   <p>— Я же говорил, — отозвался он и забрался следом.</p>
+   <p>Они плыли вдоль затопленной улицы, мимо заборов, торчавших из воды, мимо скамеек и почтовых ящиков. У дома с зелёной крышей на крыльце сидела старушка с кошкой на руках.</p>
+   <p>— Мария Степановна! — позвал Андрей. — Вам помочь?</p>
+   <p>— Да чем тут поможешь, — махнула рукой старушка. — Вода придёт и уйдёт. Каждый год так. Вы мне лучше хлеба привезите из магазина, если доплывёте.</p>
+   <p>Они доплыли. Магазин на пригорке стоял сухой, продавщица Зоя встретила их как героев и выдала три буханки, пакет сушек и банку сгущёнки — «для бодрости».</p>
+   <p>На обратном пути Вера вспомнила стихи, которые дед читал ей в детстве, когда они вот так же плыли по весенней воде:</p>
+   <poem><stanza><v>Течёт река, течёт вода,</v><v>Уходит всё — и в никуда.</v><v>Что унесло — то принесёт,</v><v>Кто ждать умеет — тот плывёт.</v></stanza></poem>
+   <p>— Это чьё? — спросил Андрей.</p>
+   <p>— Дедушкино. Он сам сочинял. Говорил, что река ему подсказывает.</p>
+   <empty-line/>
+   <p>К вечеру дождь кончился. Вода остановилась на последней ступеньке крыльца и дальше не пошла, будто дом договорился с рекой о чём-то давно и навсегда. Вера сидела на ступеньке, поджав ноги, и пила чай из дедовой кружки. Андрей сидел рядом.</p>
+   <p>— Так что с домом? — спросил он наконец.</p>
+   <p>Вера долго молчала. Потом достала из кармана телефон и набрала номер тёти Нины.</p>
+   <p>— Тётя, это я. Я приехала. Да, всё хорошо. Послушай… Скажи покупателю, что дом не продаётся.</p>
+   <p>На том конце помолчали, потом тётя Нина засмеялась — тихо и, как показалось Вере, с облегчением.</p>
+   <p>— Я знала, — сказала она. — Ты всегда возвращаешься. Просто не сразу.</p>
+   <p>Вера положила телефон на ступеньку и посмотрела на реку. Вода медленно отступала, оставляя на траве тонкую полоску ила, похожую на строчку, которую кто-то начал писать и пока не закончил. Завтра нужно будет позвонить Ольге Петровне, решить что-то с квартирой, забрать кактус. Но это всё будет завтра.</p>
+   <p>А сегодня был вечер, был чай, была река. И «Ласточка», привязанная к перилам крыльца, тихо покачивалась на воде, словно кивала.</p>
+  </section>
+ </body>
+ <binary id="cover.png" content-type="image/png">
+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
+KIFCCKCI+ieEAIqof0IIoIj6J4QAiqh/QgggiuInhADSKHtCCABCCABCCABCCABCCABCCABCCABC
+CABCCABCCAAjhPCrJ+cAUEsIARBCABBCABBCABBCABBCABBCABBCAJg5hFfnAFBLCAEQQgAQQgAQ
+QgCoC+EFANQSQgCEEACEEACEEADKQvjm6gIAagkhAEIIAEIIAEIIAEIIAEIIAEIIAEIIAEIIAEII
+AEIIAEIIAEIIAEIIAEIIAEIIAEIIAEIIAEIIACOE8PXVBQDUEkIAhBAAhBAAKkN4eUGtH373Ow4B
+KCeE1RV8x1EAQkhvBbUQEEKn0F5BLQSEkPYKaiEghLRXUAsBIaS9gloICCHVCZRDQAhRQS0EhBAV
+1EJACFFBLQSEkPYKaiEghLRXUAsBIaQ6gXIICCEqqIXAvCF8dXnBHBao4DuOGpiJEKqgFgJCiApq
+ISCEqKAWAkKICmohIIRIoBwCQogKaiEghKigFgJCiApqISCEqKAWAkKICmohIIRIoBwCQogKaiEg
+hKigFgJCiApqISCEqKAWAkKICmohIISooBYCQogEyiEghKigFgIjhPD64pLVVVXwHZcObIQQqqAW
+AkKICmohIISooBYCQogEyiEghKigFgJCiApqISCEqKAWAkKICmohIISooBYCQogKaiEghEigHAJC
+iApqISCEqKAWAkKICmohIISooBYCQogKaiEghBKIHAJCqIJoISCEKogWAiOE8OXFJR9DkFZk/ICP
+J4QqqIWAEKKCWggIISqohYAQIoFyCAghKqiFgBCigloICCEqqIWAEKKCWggIoQqihYAQssv3v/cJ
+yzBsgBAKoRACCKEQCiGAEAqhEAIIoRAKIcCDQ3h+yUHo03IhNG/A4QihEAohIIQIoRACQogQCiHQ
+GMIX55cchD4txrABBySEQiiEgBAihEIICCFCKISAECKEQggIIUIohIAQIoRCCAghQiiEgBDyAT/+
++U9u0ichBISwLn5CKISAEFbHTwiFEBDC9v4J4fLenrb5BIRwE/ETwrVCeJO5BYRwzf4J4eohFEVA
+CFeLnxBuLYSiCAjh0v0Tws2GUBEBIVyif6uH8Jvrny1vrBCKItAbwgX6J4RjhVAUgYoQLtk/IRw3
+hKIIzBbCVfonhHOEUBGhN4TPzy9Ht27/hHCyEN40wesA7hT9E0IhFEUQQv0TQiEURRBC/RNCIRRF
+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
+QmCC
+ </binary>
+ <binary id="fig.png" content-type="image/png">
+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
+ </binary>
+</FictionBook>
