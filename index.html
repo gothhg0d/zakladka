@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
 <meta name="theme-color" content="#0B0B0D">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0B0D'/%3E%3Cpath d='M11 6h10v20l-5-4-5 4z' fill='%238794FF'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="fonts/liberation-serif.css?v=1793699196">
+<link rel="stylesheet" href="fonts/liberation-serif.css?v=1793709189">
 <style>
 /* Layout: минималистичная витрина — крупная гротесковая типографика, воздух и одна объёмная сцена; книги стоят на полке настоящими 3D-томиками, акцент — кобальтовая лента-закладка. */
 :root {
@@ -601,6 +601,43 @@ main { padding-block: 8px 40px; }
 @keyframes ripple { to { transform: scale(1); opacity: 0; } }
 .book-open:hover .b3d { will-change: transform; }
 .grid { contain: layout style; }
+/* ——— большой поиск каталога ——— */
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.omni { margin-top: 30px; display: grid; gap: 18px; }
+.omni-box { position: relative; isolation: isolate; display: flex; align-items: center; gap: 14px; height: 76px; padding: 0 12px 0 24px; border-radius: 26px; background: var(--leaf); box-shadow: 0 0 0 1px var(--rule), 0 24px 60px -34px rgb(var(--shade) / .55); transition: transform var(--t-mid) var(--spring), box-shadow var(--t-mid) var(--ease-out); }
+.omni-box::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 28px; background: conic-gradient(from var(--ang), var(--ribbon), transparent 28%, transparent 62%, var(--ribbon)); opacity: 0; transition: opacity var(--t-mid) var(--ease-out); }
+.omni-box:focus-within { transform: translateY(-2px); box-shadow: 0 0 0 1px transparent, 0 30px 70px -30px rgb(var(--glow) / .55); }
+.omni-box:focus-within::before { opacity: 1; animation: ang 3.2s linear infinite; }
+@keyframes ang { to { --ang: 360deg; } }
+.omni-ico { width: 26px; height: 26px; color: var(--ink-3); transition: color var(--t-fast), transform var(--t-mid) var(--spring); }
+.omni-box:focus-within .omni-ico { color: var(--ribbon); transform: scale(1.1) rotate(-8deg); }
+.omni-box input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; font: 500 clamp(17px, 2.2vw, 22px)/1 var(--f-ui); letter-spacing: -.02em; color: var(--ink); }
+.omni-box input::-webkit-search-cancel-button { display: none; }
+.omni-hint { position: absolute; left: 64px; right: 84px; top: 50%; translate: 0 -50%; font: 500 clamp(17px, 2.2vw, 22px)/1 var(--f-ui); letter-spacing: -.02em; color: var(--ink-3); pointer-events: none; white-space: nowrap; overflow: hidden; }
+.omni-hint::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -.15em; background: var(--ribbon); animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.omni-box.typing .omni-hint, .omni-box:focus-within .omni-hint { opacity: 0; }
+.omni-go { width: 52px; height: 52px; border-radius: 18px; flex: none; }
+.omni-go:hover svg.i { transform: translateX(3px); }
+.omni-filters { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+.f-group { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
+.f-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.src-pills { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+.src-pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--paper-2); font-size: 12.5px; color: var(--ink-2); animation: pop .4s var(--spring) both; animation-delay: calc(var(--i, 0) * 50ms); }
+.src-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+.src-pill.loading i { background: var(--ribbon); animation: blinkDot 1s var(--ease-io) infinite; }
+.src-pill.done i { background: #2FB36B; }
+.src-pill.err i { background: var(--danger); }
+.src-pill b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+@keyframes blinkDot { 50% { opacity: .25; transform: scale(.7); } }
+.tb { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.tb span { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgb(var(--glow) / .12); color: var(--ribbon); }
+.tb span[data-k="manga"] { background: rgb(224 69 123 / .14); color: #E0457B; }
+.tb span[data-k="comic"] { background: rgb(214 140 0 / .16); color: #C98600; }
+.tb span[data-k="scan"] { background: var(--paper-2); color: var(--ink-2); }
+.tb span.lang { background: transparent; color: var(--ink-3); padding: 0; }
+@media (max-width: 560px) { .omni-box { height: 64px; padding-left: 18px; border-radius: 22px; } .omni-hint { left: 54px; right: 72px; } .omni-go { width: 46px; height: 46px; } .f-group { flex-wrap: wrap; } }
+.player .pl-status { font-size: 12.5px; padding: 0 8px; max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--paper); }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
@@ -662,18 +699,35 @@ main { padding-block: 8px 40px; }
     <div class="cat-head">
       <span class="kicker"><i></i>Общественное достояние</span>
       <h1 class="display">Каталог</h1>
-      <p class="lede">Классика и старые комиксы, которые можно читать свободно. Нажмите на книгу, и она целиком ляжет на полку.</p>
+      <p class="lede">Один поиск по всему сразу: русские и английские книги, манга и комиксы с картинками, сканы старых изданий.</p>
     </div>
-    <div class="cat-tools">
-      <div class="seg" id="cat-src" role="group" aria-label="Источник">
-        <button data-src="ru" aria-pressed="true">Русская классика</button>
-        <button data-src="world" aria-pressed="false">Мировая литература</button>
-        <button data-src="comics" aria-pressed="false">Комиксы</button>
-        <button data-src="ia" aria-pressed="false">Архив книг</button>
+    <div class="omni">
+      <form class="omni-box" id="cat-form" role="search">
+        <svg class="i omni-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+        <label class="vh" for="cat-q">Поиск в каталоге</label>
+        <input id="cat-q" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <span class="omni-hint" id="omni-hint" aria-hidden="true"></span>
+        <button class="key-plus omni-go" type="submit" aria-label="Искать"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <div class="omni-filters">
+        <div class="f-group"><span class="f-label">Тип</span>
+          <div class="chips" id="f-type" role="group" aria-label="Тип"><span class="chip-ink"></span>
+            <button class="chip" data-v="all" aria-pressed="true">Всё</button>
+            <button class="chip" data-v="book" aria-pressed="false">Книги</button>
+            <button class="chip" data-v="comic" aria-pressed="false">Манга и комиксы</button>
+            <button class="chip" data-v="scan" aria-pressed="false">Сканы изданий</button>
+          </div>
+        </div>
+        <div class="f-group"><span class="f-label">Язык</span>
+          <div class="chips" id="f-lang" role="group" aria-label="Язык"><span class="chip-ink"></span>
+            <button class="chip" data-v="all" aria-pressed="true">Любой</button>
+            <button class="chip" data-v="ru" aria-pressed="false">Русский</button>
+            <button class="chip" data-v="en" aria-pressed="false">English</button>
+          </div>
+        </div>
       </div>
-      <form class="search" id="cat-form" role="search"><label class="vh" for="cat-q">Поиск в каталоге</label><input id="cat-q" type="search" placeholder="Автор или название" autocomplete="off"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></form>
+      <div class="src-pills" id="src-pills" aria-live="polite"></div>
     </div>
-    <div class="authors" id="authors"></div>
     <p class="cat-status" id="cat-status"></p>
     <ol class="cat-list" id="cat-list"></ol>
     <div class="more-row" id="more-row"></div>
@@ -735,6 +789,6 @@ main { padding-block: 8px 40px; }
   <div class="note-pop" id="note-pop" hidden></div>
 </div>
 
-<script src="app.js?v=1793699196" charset="utf-8"></script>
+<script src="app.js?v=1793709189" charset="utf-8"></script>
 </body>
 </html>
