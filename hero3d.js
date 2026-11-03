@@ -21,7 +21,7 @@ function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let
 function pageCanvas(seed, spineLeft, num) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 712;
   const g = c.getContext('2d'); const r = rng(seed);
-  g.fillStyle = '#FBFAF5'; g.fillRect(0, 0, 512, 712);
+  g.fillStyle = '#F8F0E2'; g.fillRect(0, 0, 512, 712);
   const sx = spineLeft ? 0 : 512;
   const grd = g.createLinearGradient(sx, 0, spineLeft ? 90 : 422, 0);
   grd.addColorStop(0, 'rgba(40,36,30,.16)'); grd.addColorStop(1, 'rgba(40,36,30,0)');
@@ -29,7 +29,7 @@ function pageCanvas(seed, spineLeft, num) {
   let y = 86; const x0 = 64, maxW = 384;
   if (r() < 0.45) {
     g.fillStyle = '#16161a'; g.font = '600 30px Onest, system-ui, sans-serif'; g.textAlign = 'center';
-    g.fillText(TITLES[seed % TITLES.length], 256, 120); g.fillStyle = '#2F45FF'; g.fillRect(238, 138, 36, 4); y = 196; g.textAlign = 'left';
+    g.fillText(TITLES[seed % TITLES.length], 256, 120); g.fillStyle = '#A0682F'; g.fillRect(238, 138, 36, 4); y = 196; g.textAlign = 'left';
   }
   g.fillStyle = '#2b2b30'; g.font = '21px "Liberation Serif", "Times New Roman", serif';
   let wi = Math.floor(r() * WORDS.length), line = '', indent = 26;
@@ -111,7 +111,7 @@ function build(accent) {
   camera.position.set(0, 5.2, 5.4); camera.lookAt(0, -0.15, 0);
   scene.add(new T3.AmbientLight(0xffffff, 0.78));
   const key = new T3.DirectionalLight(0xffffff, 0.55); key.position.set(-3, 6, 4); scene.add(key);
-  const rim = new T3.DirectionalLight(0xbfc6ff, 0.25); rim.position.set(4, 2, -3); scene.add(rim);
+  const rim = new T3.DirectionalLight(0xffd9b0, 0.25); rim.position.set(4, 2, -3); scene.add(rim);
 
   root = new T3.Group(); scene.add(root);
   const edge = edgeTexture();
@@ -140,7 +140,7 @@ function build(accent) {
   shadow = new T3.Mesh(new T3.PlaneGeometry(W * 3.2, H * 1.9), new T3.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.06; root.add(shadow);
   // парящие томики
-  const specs = [[-2.05, 0.75, -1.55, '#1F2A24', '#D8E3D5', 'Дом у реки'], [2.2, 0.95, -1.25, '#5E2A2A', '#F2E4DE', 'Белые ночи'], [2.0, 0.55, 1.3, '#C4B597', '#29231A', 'Шинель']];
+  const specs = [[-2.05, 0.75, -1.55, '#3D2A1C', '#EADBC6', 'Дом у реки'], [2.2, 0.95, -1.25, '#7A4B2A', '#F7E9D6', 'Белые ночи'], [2.0, 0.55, 1.3, '#D9C6A6', '#2A1C10', 'Шинель']];
   floaters = specs.map(([x, y, z, bg, ink, t], i) => {
     const front = new T3.MeshLambertMaterial({ map: new T3.CanvasTexture(coverCanvas(t, bg, ink)) });
     const side = new T3.MeshLambertMaterial({ color: new T3.Color(bg) });

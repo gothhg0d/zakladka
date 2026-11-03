@@ -1,7 +1,7 @@
 'use strict';
 /* Кэш сайта: страница — сначала из сети (чтобы обновления приходили сразу), файлы с версией и библиотеки — из кэша.
    Запросы каталога (Викитека, архивы, обложки) идут мимо кэша. Номер версии меняет deploy.sh. */
-const CACHE = 'zakladka-1793709189';
+const CACHE = 'zakladka-1793710946';
 const SHELL = ['./', 'index.html'];
 const CDN = /^(cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 

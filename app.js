@@ -270,7 +270,7 @@ async function thumb(src, w = 360) {
     return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
   } catch { return null; } finally { if (url) URL.revokeObjectURL(url); }
 }
-const PALETTE = [['#2B3DD3', '#EEF0FF'], ['#1F2A24', '#D8E3D5'], ['#D6D9CF', '#1A1C1A'], ['#5E2A2A', '#F2E4DE'], ['#2E4A5C', '#E2EDF2'], ['#C4B597', '#29231A'], ['#3B3854', '#EAE8F5'], ['#9EA898', '#15180F'], ['#15171B', '#E4E1D6'], ['#7A6A3A', '#F5EFDC']];
+const PALETTE = [['#5A3A22', '#F3E5D0'], ['#2B211A', '#E9D9C2'], ['#D9C6A6', '#2A1C10'], ['#7A4B2A', '#F7E9D6'], ['#3D2E22', '#EADBC6'], ['#B88B5A', '#24170C'], ['#4A2F2A', '#F1E0D6'], ['#A3977F', '#1E1810'], ['#1A1410', '#E7D6BF'], ['#6E5A3A', '#F5EBD9']];
 function hash(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 const coverURLs = new Map();
 function coverNode(b) {
@@ -640,11 +640,11 @@ async function cbzProvider(blob) {
   const urls = []; // храним обещания, чтобы одна страница не получила два адреса
   const src = k => (urls[k] ??= zblob(zip, names[k]).then(b => URL.createObjectURL(b)));
   return {
-    count: names.length, rtl, title, author, aspect: 1.45, names,
+    count: names.length, rtl, title, author, aspect: await (async () => { try { const i = await loadImg(await src(0), new Image(), 4000); return i.naturalWidth ? i.naturalHeight / i.naturalWidth : 1.45; } catch { return 1.45; } })(), names,
     src,
     async element(k) {
       const img = new Image(); img.alt = `Страница ${k + 1}`; img.decoding = 'async'; img.draggable = false;
-      await loadImg(await src(k), img, 2500).catch(() => { });
+      await loadImg(await src(k), img, 20000).catch(() => { });
       return img;
     },
     async blob(k) { return zblob(zip, names[k]); },
@@ -658,9 +658,11 @@ async function remoteProvider(blob) {
   const p0 = j.pages[0] || {};
   return {
     count: j.pages.length, rtl: false, aspect: p0.w && p0.h ? p0.h / p0.w : 1.45,
+    ratio: k => { const p = j.pages[k]; return p && p.w && p.h ? p.h / p.w : null; },
     async element(k) {
       const img = new Image(); img.alt = `Страница ${k + 1}`; img.decoding = 'async'; img.draggable = false; img.referrerPolicy = 'no-referrer';
-      await loadImg(j.pages[k].u, img, 9000).catch(() => { });
+      const p = j.pages[k]; if (p.w && p.h) { img.width = p.w; img.height = p.h; } // размер известен заранее — место под страницу не меняется
+      await loadImg(p.u, img, 30000).catch(() => { });
       return img;
     },
     destroy() { },
@@ -846,7 +848,7 @@ const Shelf = {
         el('div', { class: 'book-title', title: b.title }, b.title),
         el('div', { class: 'book-author' }, b.author || ' '),
         el('div', { class: 'book-foot' },
-          el('span', { class: 'fmt' }, (b.fmt === 'iapages' ? (b.sub === 'comic' ? 'КОМИКС' : 'СКАН') : { cbz: 'МАНГА', json: 'КНИГА', md: 'MD' }[b.fmt] || b.fmt.toUpperCase())),
+          el('span', { class: 'fmt' }, (b.fmt === 'iapages' ? (b.sub === 'comic' ? 'МАНГА' : 'СКАН') : { cbz: 'МАНГА', json: 'КНИГА', md: 'MD' }[b.fmt] || b.fmt.toUpperCase())),
           b.example ? el('span', { class: 'tag-ex' }, 'пример') : el('span', {}, pct >= 100 ? 'прочитано' : pct > 0 ? `${pct} %` : 'новая'),
           el('button', { class: 'key-sm', style: 'margin-left:auto', title: 'Скачать файл', 'aria-label': `Скачать «${b.title}»`, html: ICON.down, onclick: () => { Sound.tap(); exportBook(b).catch(e => { console.error(e); toast('Не удалось сохранить файл', 'err'); }); } }),
           el('button', { class: 'book-more', style: 'margin-left:0', 'aria-label': `Убрать «${b.title}» с полки`, html: ICON.trash, onclick: () => { Sound.tap(); art.classList.add('confirm'); art.querySelector('.mini').focus(); } })),
@@ -923,7 +925,7 @@ const Hero = {
         await once(LIB.three); await once('hero3d.js' + (VER ? '?v=' + VER : ''));
         await Promise.all([document.fonts?.load('21px "Liberation Serif"'), document.fonts?.load('600 30px Onest')]).catch(() => { });
       } catch { $('#hero-3d').hidden = true; return; }
-      this.ok = !!window.Hero3D && window.Hero3D.init(cv, getComputedStyle(document.documentElement).getPropertyValue('--ribbon').trim() || '#2F45FF');
+      this.ok = !!window.Hero3D && window.Hero3D.init(cv, getComputedStyle(document.documentElement).getPropertyValue('--ribbon').trim() || '#D39C63');
       if (!this.ok) { $('#hero-3d').hidden = true; return; }
       cv.animate([{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 900, easing: 'cubic-bezier(.16,1,.3,1)' });
       window.Hero3D.setActive(View.cur === 'shelf' && !R.open);
@@ -1030,7 +1032,7 @@ function openingFrom(node) {
 async function openBook(id, fromNode) {
   const b = Shelf.books.find(x => x.id === id); if (!b || R.open) return;
   R.open = true; R.book = b;
-  Sound.open(); Hero.active(false); Narrator.stop(true);
+  Sound.open(); Hero.active(false);
   reader.dataset.kind = b.kind;
   T.flow.lang = b.lang || (/[a-z]/i.test(b.title) && !/[а-яё]/i.test(b.title) ? 'en' : 'ru');
   applyReaderLook();
@@ -1042,7 +1044,6 @@ async function openBook(id, fromNode) {
   reader.hidden = false; reader.classList.remove('leaving'); reader.classList.add('entering');
   openingFrom(fromNode);
   document.documentElement.style.overflow = 'hidden';
-  $('#r-voice').hidden = b.kind !== 'text';
   setCalm(false); bumpCalm();
   const tok = ++R.tok; // книгу могут закрыть, пока она грузится
   try {
@@ -1077,7 +1078,6 @@ async function openBook(id, fromNode) {
 async function closeReader(quiet) {
   if (!R.open) return;
   R.tok++; T.token++; PG.tok++;
-  Narrator.stop(true);
   closePanels(true);
   if (!quiet) Sound.close();
   savePos.flush?.();
@@ -1095,294 +1095,6 @@ async function closeReader(quiet) {
   Hero.active(View.cur === 'shelf');
   Shelf.render(false);
 }
-
-/* ——————————————————— озвучка ——————————————————— */
-// Два движка. Нейроголоса Piper (neural.js) звучат как живой диктор: модель качается один раз и работает в фоновом потоке.
-// Системные голоса браузера — запасной вариант. В обоих случаях текст делится на абзацы и фразы с паузами,
-// а реплики героев в диалогах читает второй голос.
-const NEURAL = {
-  ru: [['ru_RU-irina-medium', 'Ирина', false], ['ru_RU-dmitri-medium', 'Дмитрий', true], ['ru_RU-denis-medium', 'Денис', true], ['ru_RU-ruslan-medium', 'Руслан', true]],
-  en: [['en_US-hfc_female-medium', 'Hazel', false], ['en_US-hfc_male-medium', 'Henry', true]],
-};
-const wait = ms => new Promise(r => setTimeout(r, ms));
-const Narrator = {
-  on: false, paused: false, idx: 0, paras: [], gen: 0, driving: false, src: null, ac: null, pre: null, altReady: new Set(), status: '',
-  rate: store.get('rate', 1), voiceURI: store.get('voice', ''),
-  opts: Object.assign({ tone: true, cast: true, engine: 'neural', expr: 1, nv: {} }, store.get('voiceOpts', {})),
-  get ok() { return 'speechSynthesis' in window || 'AudioContext' in window; },
-  get neural() { return this.opts.engine === 'neural' && !this.neuralBroken && NEURAL[this.lang()] && typeof Worker === 'function' && typeof WebAssembly === 'object'; },
-  lang() { return (T.flow.lang || 'ru').slice(0, 2).toLowerCase(); },
-  /* — нейроголоса — */
-  nvList() { return NEURAL[this.lang()] || []; },
-  nv() { const l = this.nvList(); const id = this.opts.nv[this.lang()]; return (l.find(v => v[0] === id) || l[0] || [])[0]; },
-  nvAlt() { const l = this.nvList(), main = l.find(v => v[0] === this.nv()); if (!main) return null; return (l.find(v => v[2] !== main[2]) || [])[0] || null; },
-  nvName(id) { for (const l of Object.values(NEURAL)) for (const v of l) if (v[0] === id) return v[1]; return id; },
-  async engineReady() {
-    await once('neural.js' + (VER ? '?v=' + VER : ''));
-    const id = this.nv();
-    const stored = await window.NeuralTTS.stored();
-    if (!stored.includes(id)) this.setStatus(`Скачиваю голос «${this.nvName(id)}»… это один раз`);
-    await window.NeuralTTS.load(id, (got, total) => this.setStatus(`Скачиваю голос «${this.nvName(id)}»: ${Math.round(got / total * 100)} %`));
-    this.setStatus('');
-    // второй голос для реплик героев догружается в фоне
-    const alt = this.nvAlt();
-    if (this.opts.cast && alt && !this.altReady.has(alt)) window.NeuralTTS.load(alt).then(() => this.altReady.add(alt), () => { });
-  },
-  /* — системные голоса — */
-  score(v) {
-    const n = v.name; let s = 0;
-    if (/natural|neural/i.test(n)) s += 100;
-    if (/online/i.test(n)) s += 40;
-    if (/google/i.test(n)) s += 60;
-    if (/svetlana|dariya|milena|ekaterina|irina|alena|katya/i.test(n)) s += 12;
-    if (!v.localService) s += 8;
-    return s;
-  },
-  male(v) { return /pavel|dmitry|yuri|maxim|nikolai|male|муж/i.test(v.name); },
-  voices() { try { return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(this.lang())).sort((a, b) => this.score(b) - this.score(a)); } catch { return []; } },
-  voice() { const vs = this.voices(); return vs.find(v => v.voiceURI === this.voiceURI) || vs[0] || null; },
-  altVoice() { const vs = this.voices(), main = this.voice(); if (!main) return null; return vs.find(v => v !== main && this.male(v) !== this.male(main)) || vs.find(v => v !== main) || null; },
-  saveOpts() { store.set('voiceOpts', this.opts); },
-  collect() { return $$('p, h1, h2, h3, h4, li, .v', T.flow).filter(n => !n.closest('.chap-end, .book-end') && !n.querySelector('p') && n.textContent.trim().length > 1); },
-  firstVisible() {
-    const r = T.vp.getBoundingClientRect();
-    const i = this.paras.findIndex(p => { const b = p.getBoundingClientRect(); return b.right > r.left + 2 && b.left < r.right - 2 && b.bottom > r.top + 2 && b.top < r.bottom - 2; });
-    return Math.max(0, i);
-  },
-  toggle() { this.on ? this.stop() : this.start(); },
-  async start() {
-    if (!this.ok) { toast('Этот браузер не умеет читать вслух', 'err'); Sound.error(); return; }
-    if (!R.book || R.book.kind !== 'text' || !T.model) return;
-    this.on = true; this.paused = false; this.paras = this.collect(); this.idx = this.firstVisible(); this.pre = null;
-    try { this.ac ||= new (window.AudioContext || window.webkitAudioContext)(); if (this.ac.state === 'suspended') this.ac.resume(); } catch { /* без Web Audio — только системные голоса */ }
-    Sound.chime(); this.ui();
-    const gen = ++this.gen;
-    if (this.neural) {
-      try { await this.engineReady(); }
-      catch (e) { console.error(e); this.neuralBroken = true; this.setStatus(''); toast('Нейроголос не загрузился, читаю системным голосом', 'err', 5000); }
-      if (gen !== this.gen || !this.on) return;
-      this.ui(true);
-    }
-    setTimeout(() => this.speak(), 200);
-  },
-  stopAudio() {
-    this.gen++; clearTimeout(this.t);
-    try { this.src?.stop(); } catch { /* уже остановлен */ } this.src = null;
-    try { speechSynthesis.cancel(); } catch { /* нет речи */ }
-  },
-  stop(quiet) {
-    if (!this.on) return;
-    this.on = false; this.paused = false; this.pre = null; this.stopAudio(); this.setStatus('');
-    $$('.speaking', T.flow).forEach(n => n.classList.remove('speaking'));
-    this.ui(); if (!quiet) Sound.tap();
-  },
-  pause() { this.paused = !this.paused; this.stopAudio(); Sound.tap(); this.ui(); if (!this.paused) this.speak(); },
-  skip(d) {
-    this.idx = clamp(this.idx + d, 0, Math.max(0, this.paras.length - 1)); this.pre = null; this.stopAudio(); Sound.tap();
-    if (this.paused) this.mark(); else this.speak();
-  },
-  restart() { if (this.on && !this.paused) { this.pre = null; this.stopAudio(); this.speak(); } },
-  mark() {
-    $$('.speaking', T.flow).forEach(n => n.classList.remove('speaking'));
-    const p = this.paras[this.idx]; if (p) { p.classList.add('speaking'); this.reveal(p); }
-  },
-  reveal(p) {
-    if (T.scroll) {
-      const r = p.getBoundingClientRect(), v = T.vp.getBoundingClientRect();
-      if (r.top < v.top + 40 || r.bottom > v.bottom - 160) p.scrollIntoView({ block: 'center', behavior: RM.matches ? 'auto' : 'smooth' });
-      return;
-    }
-    const pg = Math.floor((p.getBoundingClientRect().left - T.flow.getBoundingClientRect().left + 2) / T.W);
-    if (pg !== T.page) { Sound.page(); T.go(pg, true); }
-  },
-  // текст абзаца без сносок
-  text(p) { const c = p.cloneNode(true); c.querySelectorAll('.note, sup, sub').forEach(n => n.remove()); return c.textContent.replace(/\s+/g, ' ').trim(); },
-  // «— Нет, — ответила Вера. — То есть да.»: реплики героя и слова автора чередуются через тире
-  segments(p) {
-    const t = this.text(p);
-    if (/^H[1-6]$/.test(p.tagName)) return [{ text: t, kind: 'head' }];
-    if (/^[—–]\s?/.test(t)) return t.replace(/^[—–]\s*/, '').split(/\s+[—–]\s+/).map((x, i) => ({ text: x.trim(), kind: i % 2 ? 'narr' : 'speech' })).filter(s => s.text);
-    return [{ text: t, kind: 'narr' }];
-  },
-  sentences(text) {
-    const parts = text.match(/[^.!?…]+(?:[.!?…]+|$)["»”)]*\s*/g) || [text];
-    const out = [];
-    for (let s of parts) {
-      s = s.trim();
-      while (s.length > 200) { let cut = s.lastIndexOf(',', 200); if (cut < 70) cut = s.lastIndexOf(' ', 200); if (cut < 40) cut = 200; out.push(s.slice(0, cut + 1)); s = s.slice(cut + 1).trim(); }
-      if (s) out.push(s);
-    }
-    return out;
-  },
-  pauseAfter(text, kind) {
-    if (!this.opts.tone) return 0;
-    if (kind === 'head') return 750;
-    const end = text.replace(/["»”)\s]+$/, '').slice(-1);
-    return end === '?' ? 280 : end === '!' ? 260 : end === '…' || /\.\.\.$/.test(text) ? 450 : end === ',' || end === ';' || end === ':' ? 110 : 170;
-  },
-  // очередь фраз абзаца: у нейроголоса фразы одной реплики склеиваются (так интонация естественнее), у системного — по одной
-  plan(p) {
-    const neural = this.neural, tone = this.opts.tone, q = [];
-    const mainN = this.nv(), altN = this.opts.cast ? this.nvAlt() : null;
-    const mainS = this.voice(), altS = this.opts.cast ? this.altVoice() : null;
-    for (const seg of this.segments(p)) {
-      const sents = this.sentences(seg.text);
-      if (neural) {
-        const voice = seg.kind === 'speech' && altN && this.altReady.has(altN) ? altN : mainN;
-        let buf = '';
-        const flush = () => { if (!buf) return; const e = tone ? this.opts.expr : 0.55; q.push({ text: buf, nv: voice, kind: seg.kind, pause: this.pauseAfter(buf, seg.kind), opt: { length: (seg.kind === 'head' ? 1.08 : 1) / this.rate, noise: e * (seg.kind === 'speech' ? 1.12 : 1), noiseW: e } }); buf = ''; };
-        for (const s of sents) { if (buf && (buf + ' ' + s).length > 260) flush(); buf = buf ? buf + ' ' + s : s; }
-        flush();
-      } else {
-        for (const text of sents) {
-          let pitch = 1, rate = this.rate, voice = mainS;
-          if (seg.kind === 'speech') { if (altS) voice = altS; else pitch = 1.07; }
-          if (tone) {
-            const end = text.replace(/["»”)\s]+$/, '').slice(-1);
-            if (end === '?') pitch += 0.12; else if (end === '!') { pitch += 0.07; rate *= 1.04; } else if (end === '…' || /\.\.\.$/.test(text)) rate *= 0.9;
-            if (seg.kind === 'head') { pitch -= 0.06; rate *= 0.9; }
-            pitch += (Math.random() - 0.5) * 0.04;
-          }
-          q.push({ text, voice, kind: seg.kind, pitch: clamp(pitch, 0.5, 2), rate: clamp(rate, 0.5, 2.5), pause: this.pauseAfter(text, seg.kind) });
-        }
-      }
-    }
-    if (q.length && tone) q[q.length - 1].pause += 220; // вдох между абзацами
-    return q;
-  },
-  speak() {
-    if (!this.on || this.paused) return;
-    const gen = ++this.gen;
-    const p = this.paras[this.idx];
-    if (!p) { this.nextChapter(gen); return; }
-    this.mark();
-    if (this.neural) this.speakNeural(gen, p); else this.speakSystem(gen, p);
-  },
-  synth(it) { return window.NeuralTTS.synth(it.nv, it.text, it.opt); },
-  async speakNeural(gen, p) {
-    const q = this.plan(p);
-    const jobs = [];
-    if (this.pre && this.pre.idx === this.idx && q[0] && this.pre.text === q[0].text) jobs[0] = this.pre.job;
-    this.pre = null;
-    const get = i => (jobs[i] ||= this.synth(q[i]));
-    try {
-      for (let i = 0; i < q.length; i++) {
-        get(i); if (i + 1 < q.length) get(i + 1);
-        const a = await get(i);
-        if (gen !== this.gen) return;
-        if (i === q.length - 1) this.prefetch(this.idx + 1);
-        await this.play(a, gen);
-        if (gen !== this.gen) return;
-        await wait(q[i].pause);
-        if (gen !== this.gen) return;
-      }
-    } catch (e) {
-      if (gen !== this.gen) return;
-      console.error(e); this.neuralBroken = true;
-      toast('Нейроголос сбоит, дальше читаю системным голосом', 'err', 5000);
-      this.ui(true); this.speak(); return;
-    }
-    this.idx++; this.speak();
-  },
-  // первая фраза следующего абзаца готовится, пока звучит текущий — без тишины между абзацами
-  prefetch(i) {
-    const p = this.paras[i]; if (!p) return;
-    const q = this.plan(p); if (!q[0]) return;
-    this.pre = { idx: i, text: q[0].text, job: this.synth(q[0]) };
-    this.pre.job.catch(() => { });
-  },
-  play(a, gen) {
-    return new Promise(res => {
-      if (!this.ac || gen !== this.gen) return res();
-      const buf = this.ac.createBuffer(1, a.pcm.length, a.sr); buf.copyToChannel(a.pcm, 0);
-      const src = this.ac.createBufferSource(); src.buffer = buf;
-      const g = this.ac.createGain(); g.gain.value = 1.6; // модели Piper звучат тише системных голосов
-      src.connect(g).connect(this.ac.destination);
-      src.onended = () => { if (this.src === src) this.src = null; res(); };
-      this.src = src; src.start();
-    });
-  },
-  speakSystem(gen, p) {
-    const q = this.plan(p); let i = 0;
-    const lang = this.lang() === 'ru' ? 'ru-RU' : 'en-US';
-    const next = () => {
-      if (gen !== this.gen || !this.on || this.paused) return;
-      if (i >= q.length) { this.idx++; this.speak(); return; }
-      const it = q[i++];
-      const u = new SpeechSynthesisUtterance(it.text);
-      u.lang = it.voice?.lang || lang; if (it.voice) u.voice = it.voice; u.rate = it.rate; u.pitch = it.pitch;
-      u.onend = () => { if (gen === this.gen) this.t = setTimeout(next, it.pause); };
-      u.onerror = e => { if (gen === this.gen && !/interrupted|canceled/.test(e.error)) next(); };
-      speechSynthesis.speak(u);
-    };
-    try { speechSynthesis.cancel(); } catch { /* нет речи */ }
-    this.t = setTimeout(next, 80);
-  },
-  async nextChapter(gen) {
-    if (!T.model || T.ch >= T.model.chapters.length - 1) { this.stop(true); toast('Книга дочитана до конца'); Sound.chime(); return; }
-    this.driving = true; Sound.page();
-    try { await T.show(T.ch + 1, { frac: 0 }, true); } finally { this.driving = false; }
-    if (gen !== this.gen || !this.on) return;
-    this.paras = this.collect(); this.idx = 0; this.pre = null; this.speak();
-  },
-  setStatus(t) { this.status = t; const s = $('#player .pl-status'); if (s) { s.textContent = t; s.hidden = !t; } const w = $('#player .wave'); if (w) w.hidden = !!t; },
-  voiceName(v) { return v.name.replace(/^(Microsoft|Google)\s+/, '').replace(/\s*Online \(Natural\).*$/, ' ✦').replace(/\s*-\s*(Russian|English).*$/, ''); },
-  // один список: сверху нейроголоса, ниже системные
-  voiceSelect(cls) {
-    const nv = this.nvList(), vs = this.voices();
-    const cur = this.neural ? 'n:' + this.nv() : 's:' + (this.voice()?.voiceURI || '');
-    if (nv.length + vs.length < 2) return null;
-    const groups = [];
-    if (nv.length && !this.neuralBroken) groups.push(el('optgroup', { label: 'Нейроголоса — живое звучание' }, nv.map(([id, name]) => el('option', { value: 'n:' + id, selected: cur === 'n:' + id }, name + ' ✦'))));
-    if (vs.length) groups.push(el('optgroup', { label: 'Голоса браузера' }, vs.map(v => el('option', { value: 's:' + v.voiceURI, selected: cur === 's:' + v.voiceURI }, this.voiceName(v)))));
-    return el('select', {
-      class: cls, 'aria-label': 'Голос',
-      onchange: async e => {
-        const [kind, id] = [e.target.value.slice(0, 1), e.target.value.slice(2)];
-        Sound.tap();
-        if (kind === 'n') { this.opts.engine = 'neural'; this.opts.nv[this.lang()] = id; this.saveOpts(); if (this.on) { this.stopAudio(); try { await this.engineReady(); } catch { /* сообщит speak */ } this.speak(); } }
-        else { this.opts.engine = 'system'; this.saveOpts(); this.voiceURI = id; store.set('voice', id); this.restart(); }
-      },
-    }, groups);
-  },
-  ui(rebuild) {
-    const pl = $('#player');
-    $('#r-voice').setAttribute('aria-pressed', String(this.on));
-    reader.classList.toggle('narrating', this.on);
-    if (!this.on) { pl.hidden = true; pl.replaceChildren(); return; }
-    pl.hidden = false; pl.classList.toggle('paused', this.paused);
-    if (pl.childElementCount && !rebuild) { pl.querySelector('.play').innerHTML = this.paused ? ICON.play : ICON.pause; return; }
-    const rates = [0.8, 0.9, 1, 1.15, 1.3, 1.5, 2];
-    const rateBtn = el('button', {
-      class: 'rate', 'aria-label': 'Скорость чтения',
-      onclick: () => { this.rate = rates[(rates.indexOf(this.rate) + 1) % rates.length] || 1; store.set('rate', this.rate); rateBtn.textContent = fmtRate(this.rate); Sound.step(rates.indexOf(this.rate) / (rates.length - 1)); this.restart(); },
-    }, fmtRate(this.rate));
-    const sel = this.voiceSelect('select');
-    if (sel) sel.style.cssText = 'height:32px;max-width:160px;background:transparent;color:inherit;border-color:rgb(255 255 255 / .22)';
-    pl.replaceChildren(
-      el('span', { class: 'wave', 'aria-hidden': 'true', hidden: !!this.status }, el('i'), el('i'), el('i'), el('i')),
-      el('span', { class: 'pl-status', hidden: !this.status }, this.status),
-      el('button', { class: 'icon-btn', 'aria-label': 'Предыдущий абзац', html: ICON.prev, onclick: () => this.skip(-1) }),
-      el('button', { class: 'icon-btn play', 'aria-label': 'Пауза или продолжить', html: this.paused ? ICON.play : ICON.pause, onclick: () => this.pause() }),
-      el('button', { class: 'icon-btn', 'aria-label': 'Следующий абзац', html: ICON.next, onclick: () => this.skip(1) }),
-      rateBtn, sel,
-      el('button', { class: 'icon-btn', 'aria-label': 'Остановить озвучку', html: ICON.close, onclick: () => this.stop() }));
-  },
-  // раздел «Озвучка» в настройках чтения
-  settingsGroup() {
-    const sel = this.voiceSelect('select');
-    const box = el('div', { class: 'set-group' },
-      el('div', { class: 'set-label' }, 'Озвучка', el('b', {}, this.neural ? 'нейроголос' : 'голос браузера')),
-      sel || el('span', { class: 'bm-empty', style: 'padding:0' }, 'Голоса для этого языка не найдены'),
-      stepper('Выразительность', this.opts.expr, 0.6, 1.4, 0.1, v => ['спокойно', 'ровно', 'естественно', 'живо', 'артистично'][Math.round((v - 0.6) / 0.2)] || '', v => { this.opts.expr = v; this.saveOpts(); this.restart(); }),
-      toggleRow('Интонация и паузы', this.opts.tone, v => { this.opts.tone = v; this.saveOpts(); this.restart(); }),
-      toggleRow('Реплики героев другим голосом', this.opts.cast, v => { this.opts.cast = v; this.saveOpts(); if (v && this.on && this.neural) this.engineReady().catch(() => { }); this.restart(); }),
-      el('p', { class: 'bm-empty', style: 'padding:0;font-size:13px' }, 'Нейроголоса (✦) звучат как живой диктор. Каждый голос скачивается один раз, около 63 МБ, и дальше работает даже без интернета.'));
-    return box;
-  },
-};
-const fmtRate = r => String(r).replace('.', ',') + '×';
-try { speechSynthesis.onvoiceschanged = () => { if (Narrator.on) Narrator.ui(true); }; } catch { /* нет речи */ }
 
 const savePos = (() => {
   let t = null;
@@ -1406,6 +1118,25 @@ function report(pct, folio, chapTitle, label) {
   savePos();
 }
 
+// sheet — элемент со старой страницей; edge — где корешок: 'left' или 'right'; host — куда класть тень
+function turnSheet(sheet, edge, host, dur = 760) {
+  const sign = edge === 'left' ? -1 : 1;
+  sheet.classList.add('turning'); sheet.style.transformOrigin = `${edge} center`;
+  const shade = el('div', { class: 'turn-shade', style: `background:linear-gradient(${edge === 'left' ? 'to left' : 'to right'}, rgb(0 0 0 / .32), rgb(0 0 0 / .06) 45%, rgb(255 255 255 / .1) 70%, transparent)` });
+  const cast = el('div', { class: 'turn-cast', style: `background:linear-gradient(${edge === 'left' ? 'to right' : 'to left'}, rgb(0 0 0 / .28), transparent 55%)` });
+  sheet.append(shade); host.append(cast);
+  const ease = 'cubic-bezier(.45,.05,.2,1)';
+  const a = sheet.animate([
+    { transform: 'rotateY(0deg)', boxShadow: '0 0 0 rgb(0 0 0 / 0)' },
+    { transform: `rotateY(${sign * 38}deg) translateZ(18px) scaleY(1.012)`, boxShadow: `${-sign * 18}px 0 40px rgb(0 0 0 / .28)`, offset: 0.38 },
+    { transform: `rotateY(${sign * 84}deg) translateZ(6px)`, boxShadow: `${-sign * 8}px 0 22px rgb(0 0 0 / .2)`, opacity: 1, offset: 0.9 },
+    { transform: `rotateY(${sign * 92}deg) translateZ(4px)`, boxShadow: `${-sign * 6}px 0 20px rgb(0 0 0 / .18)`, opacity: 0 },
+  ], { duration: dur, easing: ease, fill: 'forwards' });
+  shade.animate([{ opacity: 0 }, { opacity: 0.55, offset: 0.4 }, { opacity: 1 }], { duration: dur, easing: ease, fill: 'forwards' });
+  cast.animate([{ opacity: 0.9 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }], { duration: dur, easing: ease, fill: 'forwards' });
+  const done = () => { sheet.remove(); cast.remove(); };
+  a.finished.then(done, done); setTimeout(done, dur + 1500);
+}
 function sheen(dir) {
   if (RM.matches) return;
   const s = $('#sheen'); s.classList.remove('go-f', 'go-b'); void s.offsetWidth; s.classList.add(dir === 'f' ? 'go-f' : 'go-b');
@@ -1438,7 +1169,6 @@ const T = {
     return n;
   },
   async show(ch, at = {}, anim = false) {
-    if (Narrator.on && !Narrator.driving) Narrator.stop(true);
     const n = this.model.chapters.length;
     ch = clamp(ch, 0, n - 1);
     const tok = ++this.token;
@@ -1508,11 +1238,31 @@ const T = {
   go(p, anim) {
     const prev = this.page;
     this.page = clamp(p, 0, this.pages - 1);
-    if (anim && this.page !== prev) sheen(this.page > prev ? 'f' : 'b');
-    this.flow.classList.toggle('anim', !!anim && !RM.matches);
+    if (anim && this.page !== prev && !RM.matches) this.turn(prev, this.page > prev);
+    this.flow.classList.remove('anim');
     this.flow.style.transform = `translate3d(${-this.page * this.W}px,0,0)`;
     this.frac = this.pages > 1 ? this.page / (this.pages - 1) : 0;
     this.report();
+  },
+  turn(from, fwd) { this.playSheet(this.makeSheet(from, fwd), fwd); },
+  // копия страницы, которую видно сейчас; при смене главы её делаем до подмены текста
+  makeSheet(from, fwd) {
+    const two = this.flow.style.columnCount === '2';
+    const half = this.W / 2;
+    const sheet = el('div', { class: 'leafturn' });
+    // в развороте переворачивается одна половина: вперёд — правая, назад — левая
+    if (two) Object.assign(sheet.style, fwd ? { left: half + 'px', width: half + 'px' } : { left: '0px', width: half + 'px' });
+    const clone = this.flow.cloneNode(true);
+    clone.removeAttribute('id'); clone.classList.remove('anim', 'swap');
+    clone.style.transform = `translate3d(${-from * this.W - (two && fwd ? half : 0)}px,0,0)`;
+    sheet.append(clone);
+    return sheet;
+  },
+  playSheet(sheet, fwd) {
+    if (!sheet || RM.matches) return;
+    $$('.leafturn, .turn-cast', this.vp).forEach(n => n.remove()); // быстрое листание: прошлый лист уже не нужен
+    this.vp.append(sheet);
+    turnSheet(sheet, fwd ? 'left' : 'right', this.vp);
   },
   onScroll() {
     const max = this.vp.scrollHeight - this.vp.clientHeight;
@@ -1530,13 +1280,13 @@ const T = {
   next() {
     if (this.scroll) { this.vp.scrollBy({ top: this.vp.clientHeight * 0.88, behavior: RM.matches ? 'auto' : 'smooth' }); return; }
     if (this.page < this.pages - 1) { Sound.page(); this.go(this.page + 1, true); }
-    else if (this.ch < this.model.chapters.length - 1) { Sound.page(); this.show(this.ch + 1, { frac: 0 }, true); }
+    else if (this.ch < this.model.chapters.length - 1) { Sound.page(); const sh = RM.matches ? null : this.makeSheet(this.page, true); this.show(this.ch + 1, { frac: 0 }, !sh).then(() => this.playSheet(sh, true)); }
     else toast('Это последняя страница');
   },
   prev() {
     if (this.scroll) { this.vp.scrollBy({ top: -this.vp.clientHeight * 0.88, behavior: RM.matches ? 'auto' : 'smooth' }); return; }
     if (this.page > 0) { Sound.page(); this.go(this.page - 1, true); }
-    else if (this.ch > 0) { Sound.page(); this.show(this.ch - 1, { end: true }, true); }
+    else if (this.ch > 0) { Sound.page(); const sh = RM.matches ? null : this.makeSheet(this.page, false); this.show(this.ch - 1, { end: true }, !sh).then(() => this.playSheet(sh, false)); }
   },
   seek(pct) {
     const target = pct * this.total; let ch = 0;
@@ -1594,33 +1344,41 @@ const PG = {
     const bw = (idx.length === 2 ? r.width / 2 : r.width) - 16, bh = r.height - 16;
     this.report();
     let els;
+    const wait = setTimeout(() => { if (tok === this.tok) this.vp.classList.add('waiting'); }, 220);
     try { els = await Promise.all(idx.map(k => this.prov.element(k, bw, bh, Settings.p.fit))); }
-    catch (e) { if (tok === this.tok) { console.error(e); toast('Страница не отрисовалась', 'err'); } return; }
+    catch (e) { clearTimeout(wait); this.vp.classList.remove('waiting'); if (tok === this.tok) { console.error(e); toast('Страница не отрисовалась', 'err'); } return; }
+    clearTimeout(wait);
     if (tok !== this.tok || !this.prov) return;
+    this.vp.classList.remove('waiting');
     const leaf = el('div', { class: 'leaf' + (idx.length === 2 ? ' two' : '') + (this.dir === 'rtl' ? ' rtl' : '') }, ...els);
     const old = this.leaf; this.leaf = leaf;
-    this.vp.append(leaf);
+    $$('.leaf.turning', this.vp).forEach(n => n.remove());
+    if (old) this.vp.insertBefore(leaf, old); else this.vp.append(leaf);
     this.vp.scrollTop = 0;
-    if (dirSign && !RM.matches) {
-      // старый лист переворачивается вокруг корешка, новый проявляется из глубины
+    if (dirSign && old && !RM.matches) {
+      // вперёд при чтении слева направо корешок слева; у манги справа налево — наоборот
       const s = dirSign * (this.dir === 'rtl' ? -1 : 1);
-      leaf.animate([{ transform: `translateX(${s * 3}%) scale(.965)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.16,1,.3,1)' });
-      if (old) {
-        old.style.transformOrigin = s > 0 ? 'left center' : 'right center'; old.style.zIndex = 2;
-        old.animate([{ transform: 'rotateY(0deg)', opacity: 1 }, { transform: `rotateY(${s > 0 ? -82 : 82}deg)`, opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.55,0,.45,1)', fill: 'forwards' }).finished.then(() => old.remove(), () => old.remove());
-        setTimeout(() => old.remove(), 900);
-      }
-      sheen(s > 0 ? 'f' : 'b');
+      const edge = s > 0 ? 'left' : 'right';
+      // в развороте переворачивается одна страница — со стороны листания; поверх неё кладём точную копию картинки
+      const kids = Array.from(old.children).sort((x, y) => x.getBoundingClientRect().left - y.getBoundingClientRect().left);
+      const node = kids.length === 2 ? (s > 0 ? kids[1] : kids[0]) : kids[0];
+      const vr = this.vp.getBoundingClientRect(), r = node.getBoundingClientRect();
+      const sheet = el('div', { class: 'leafturn', style: `left:${r.left - vr.left}px;top:${r.top - vr.top + this.vp.scrollTop}px;width:${r.width}px;height:${r.height}px;bottom:auto;background:#fff` });
+      // переносим саму картинку: она уже отрисована, копия могла бы мигнуть пустым листом
+      node.style.cssText = 'width:100%;height:100%;max-width:none;max-height:none;display:block;object-fit:contain;box-shadow:none';
+      sheet.append(node); this.vp.append(sheet);
+      old.remove();
+      turnSheet(sheet, edge, this.vp);
     } else old?.remove();
     // заранее готовим следующие страницы
     const nx = idx[idx.length - 1] + 1;
-    for (let k = nx; k < Math.min(this.n, nx + 2); k++) this.prov.element(k, bw, bh, Settings.p.fit).catch(() => { });
+    for (let k = nx; k < Math.min(this.n, nx + 3); k++) this.prov.element(k, bw, bh, Settings.p.fit).catch(() => { });
   },
   buildScroll() {
     const col = el('div', { class: 'p-col' });
     const ratio = this.prov.aspect || 1.45;
     for (let k = 0; k < this.n; k++) {
-      const slot = el('div', { class: 'pg-slot', style: `aspect-ratio: 1 / ${ratio}`, dataset: { k } }, el('span', { class: 'ph' }, String(k + 1)));
+      const slot = el('div', { class: 'pg-slot', style: `aspect-ratio: 1 / ${this.prov.ratio?.(k) || ratio}`, dataset: { k } }, el('span', { class: 'ph' }, String(k + 1)));
       this.slots.push(slot); col.append(slot);
     }
     this.vp.append(col);
@@ -1636,8 +1394,10 @@ const PG = {
       if (!this.slots.includes(slot)) return;
       node.style.width = '100%'; node.style.height = 'auto';
       const before = slot.offsetTop < this.vp.scrollTop ? slot.offsetHeight : 0;
-      slot.replaceChildren(node); slot.style.aspectRatio = '';
-      if (before) this.vp.scrollTop += slot.offsetHeight - before; // не даём ленте прыгать
+      slot.replaceChildren(node);
+      if (node.naturalWidth) slot.style.aspectRatio = `${node.naturalWidth} / ${node.naturalHeight}`; else slot.style.aspectRatio = '';
+      // браузер сам удерживает прокрутку (scroll anchoring); вручную — только там, где он этого не умеет
+      if (before && !CSS.supports('overflow-anchor', 'auto')) this.vp.scrollTop += slot.offsetHeight - before;
     } catch { slot.dataset.done = ''; }
   },
   onScroll() {
@@ -1736,7 +1496,6 @@ document.addEventListener('keydown', e => {
       if (/^[tTеЕ]$/.test(e.key)) openPanel('toc');
       else if (/^[bBиИ]$/.test(e.key)) toggleMark();
       else if (/^[fFаА]$/.test(e.key)) toggleFull();
-      else if (/^[vVмМ]$/.test(e.key) && R.book.kind === 'text') Narrator.toggle();
   }
   bumpCalm();
 });
@@ -1870,7 +1629,7 @@ function renderSettings() {
   const body = $('#set-body'); const pages = R.book.kind === 'pages';
   if (!pages) needFont('literata');
   const S = pages ? Settings.p : Settings.t;
-  const sw = [['auto', 'Как у сайта', 'var(--leaf)', 'var(--ink)'], ['paper', 'Бумага', '#F6F5F0', '#1A1B1D'], ['sepia', 'Сепия', '#EBE0CA', '#3A2E21'], ['night', 'Ночь', '#0F1011', '#C8CAC4']];
+  const sw = [['auto', 'Как у сайта', 'var(--leaf)', 'var(--ink)'], ['paper', 'Бумага', '#F7F0E4', '#2A1E15'], ['sepia', 'Сепия', '#E6D3B3', '#3A2817'], ['night', 'Ночь', '#110D0A', '#DCCDB8']];
   const theme = el('div', { class: 'set-group' }, el('div', { class: 'set-label' }, 'Тон бумаги'),
     el('div', { class: 'swatches' }, sw.map(([v, t, bg, fg]) => el('button', { class: 'swatch', title: t, 'aria-label': t, 'aria-pressed': String(S.rt === v), style: `background:${bg};color:${fg}`, onclick: e => { S.rt = v; Settings.save(); Sound.tap(); $$('.swatch', body).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); applyReaderLook(); } }, 'Аа'))));
   const relayoutText = () => { Settings.save(); applyReaderLook(); requestAnimationFrame(() => T.relayout()); };
@@ -1886,8 +1645,7 @@ function renderSettings() {
       el('div', { class: 'set-group' },
         toggleRow('Выключка по ширине', Settings.t.justify, v => { Settings.t.justify = v; relayoutText(); }),
         toggleRow('Буквица в начале главы', Settings.t.dropcap, v => { Settings.t.dropcap = v; relayoutText(); }),
-        toggleRow('Разворот на широком экране', Settings.t.spread, v => { Settings.t.spread = v; relayoutText(); })),
-      Narrator.settingsGroup());
+        toggleRow('Разворот на широком экране', Settings.t.spread, v => { Settings.t.spread = v; relayoutText(); })));
   } else {
     body.replaceChildren(theme,
       seg('Показ', [['single', 'Страница'], ['spread', 'Разворот'], ['scroll', 'Лента']], Settings.p.mode, v => { Settings.p.mode = v; Settings.save(); PG.build(); }),
@@ -1908,7 +1666,6 @@ $('#r-toc').addEventListener('click', () => openPanel('toc'));
 $('#r-set').addEventListener('click', () => openPanel('set'));
 $('#r-mark').addEventListener('click', toggleMark);
 $('#r-full').addEventListener('click', toggleFull);
-$('#r-voice').addEventListener('click', () => Narrator.toggle());
 $('#r-scrub').addEventListener('input', e => { $('#r-scrub-a').textContent = Math.round(e.target.value / 10) + ' %'; bumpCalm(); });
 $('#r-scrub').addEventListener('change', e => { const v = e.target.value / 1000; Sound.page(); if (R.book.kind === 'pages') PG.seek(v); else T.seek(v); });
 window.addEventListener('resize', debounce(() => { if (!R.open) { moveInk($('#nav-pill'), $('.tab[aria-selected="true"]')); moveInk($('#chip-ink'), $('#chips .chip[aria-pressed="true"]')); return; } if (loading()) return; if (R.book.kind === 'text') T.relayout(); else if (PG.mode !== 'scroll') PG.render(PG.i, 0); }, 160));
@@ -2023,18 +1780,23 @@ async function findCover(it) {
   return url;
 }
 
-const SRC_LABEL = { ru: 'Викитека', world: 'Standard Ebooks', comics: 'Internet Archive', ia: 'Internet Archive' };
-const keyOf = it => ({ ru: 'ws:' + it.page, world: 'se:' + it.path, comics: 'ia:' + it.id, ia: 'ia:' + it.id }[it.src]);
-const KIND_LABEL = { book: 'Книга', manga: 'Манга', comic: 'Комикс', scan: 'Скан' };
-const HINTS = ['Пиковая дама', 'Чехов', 'Hokusai manga', 'Frankenstein', 'Шинель', 'Sherlock Holmes', 'Space Action', 'Толстой', 'Dracula', 'Гоголь'];
+const SRC_LABEL = { ru: 'Викитека', world: 'Standard Ebooks', comics: 'Internet Archive', ia: 'Internet Archive', shiki: 'Shikimori', ol: 'Open Library' };
+const SHIKI = 'https://shikimori.io';
+const SHIKI_KIND = { manga: 'Манга', manhwa: 'Манхва', manhua: 'Маньхуа', one_shot: 'Ваншот', light_novel: 'Ранобэ', novel: 'Новелла', doujin: 'Додзинси' };
+// официальные площадки, где мангу читают легально (их ссылки берём из AniList)
+const READ_SITES = /manga ?plus|viz|shonen jump|k ?manga|comikey|azuki|inkr|mangamo|bookwalker|kodansha|yen press|webtoon|tapas|tappytoon|lezhin|pocket comics|manta|comic walker|piccoma|line manga|kakao|naver|seven seas|j-novel|bilibili|crunchyroll|amazon|kindle|cmoa|ebookjapan|renta|mangatoon|tencent|kuaikan|izneo|glénat|planet manga|xl media|азбука|альт граф|истари|комикс ?стор|libri|readmanga/i;
+const keyOf = it => ({ ru: 'ws:' + it.page, world: 'se:' + it.path, comics: 'ia:' + it.id, ia: 'ia:' + it.id, shiki: 'sh:' + it.id }[it.src]);
+const KIND_LABEL = { book: 'Книга', manga: 'Манга', comic: 'Комикс', scan: 'Скан', manhwa: 'Манхва', manhua: 'Маньхуа' };
+const HINTS = ['Блич', 'Магическая битва', 'Чехов', 'Black Clover', 'Наруто', 'Frankenstein', 'Боруто', 'Пиковая дама', 'Ван-Пис', 'Dracula', 'Атака титанов', 'Толстой'];
 // IA: комиксы ace-comics и старая японская манга (Хокусай и др.) — всё в общественном достоянии
-const IA_COMICS = '((collection:ace-comics AND format:"Comic Book ZIP") OR ((title:"hokusai manga" OR subject:manga) AND mediatype:texts AND format:"Single Page Processed JP2 ZIP" AND date:[1600-01-01 TO 1929-12-31])) AND -collection:inlibrary AND -collection:printdisabled';
+const IA_MANGA = '(title:"hokusai manga" OR subject:manga) AND mediatype:texts AND format:"Single Page Processed JP2 ZIP" AND date:[1600-01-01 TO 1929-12-31] AND -collection:inlibrary AND -collection:printdisabled';
 const IA_SCANS = 'mediatype:texts AND format:"Single Page Processed JP2 ZIP" AND year:[1700 TO 1925] AND -collection:inlibrary AND -collection:printdisabled AND -subject:manga';
 const IA_CLASSICS = 'creator:(Пушкин OR Гоголь OR Чехов OR Толстой OR Достоевский OR Тургенев OR Лермонтов OR Лесков OR Гончаров OR Pushkin OR Gogol OR Chekhov OR Tolstoy OR Dostoyevsky OR Turgenev OR Lermontov OR Dickens OR Austen OR Twain)';
 const Catalog = {
   inited: false, results: [], req: 0, type: store.get('ftype', 'all'), lang: store.get('flang', 'all'), q: '', cursors: new Map(),
   init() {
     if (this.inited) return; this.inited = true;
+    if (this.type === 'comic') this.type = 'manga';
     [['#f-type', 'type', 'ftype'], ['#f-lang', 'lang', 'flang']].forEach(([sel, key, sk]) => {
       const box = $(sel);
       $$('.chip', box).forEach(c => {
@@ -2065,10 +1827,39 @@ const Catalog = {
   sources() {
     return [
       { id: 'ws', name: 'Викитека', type: 'book', langs: ['ru'], run: (q, page) => this.fromWs(q, page) },
+      { id: 'ol', name: 'Open Library', type: 'book', langs: ['ru', 'en'], run: (q, page) => this.fromOl(q, page) },
       { id: 'se', name: 'Standard Ebooks', type: 'book', langs: ['en'], run: (q, page) => this.fromSe(q, page) },
-      { id: 'iac', name: 'Манга и комиксы', type: 'comic', langs: ['en', 'ja'], run: (q, page) => this.fromIA(q, page, 'comics') },
+      { id: 'sh', name: 'Манга · Shikimori', type: 'manga', langs: ['ru', 'en'], run: (q, page) => this.fromShiki(q, page) },
+      { id: 'iam', name: 'Старая манга', type: 'manga', langs: ['en', 'ja'], run: (q, page) => this.fromIA(q, page, 'comics') },
       { id: 'ias', name: 'Сканы изданий', type: 'scan', langs: ['ru', 'en'], run: (q, page) => this.fromIA(q, page, 'ia') },
     ].filter(s => (this.type === 'all' || s.type === this.type) && (this.lang === 'all' || s.langs.includes(this.lang)));
+  },
+  // Shikimori: огромная база манги, манхвы и маньхуа с русскими названиями; читать — по официальным ссылкам
+  async fromShiki(q, page) {
+    const url = `${SHIKI}/api/mangas?limit=24&page=${page + 1}&order=${q ? 'popularity' : 'popularity'}&censored=true&kind=manga,manhwa,manhua,one_shot${q ? '&search=' + encodeURIComponent(q) : ''}`;
+    const list = await this.api(url, this.ctrl?.signal);
+    const items = (list || []).map(m => ({
+      src: 'shiki', kind: SHIKI_KIND[m.kind] && ['manhwa', 'manhua'].includes(m.kind) ? m.kind : 'manga', lang: 'ru',
+      id: m.id, title: m.russian || m.name, author: m.russian && m.name !== m.russian ? m.name : '',
+      extra: [SHIKI_KIND[m.kind], m.aired_on?.slice(0, 4), m.chapters ? m.chapters + ' гл.' : ''].filter(Boolean).join(' · '),
+      cover: m.image?.original && !/missing/.test(m.image.original) ? SHIKI + m.image.original : '', score: m.score, url: SHIKI + m.url,
+    }));
+    return { items, total: items.length >= 24 ? (page + 1) * 24 + '+' : page * 24 + items.length, next: items.length >= 24 ? () => this.fromShiki(q, page + 1) : null };
+  },
+  // Open Library: миллионы изданий; берём только те, что выложены в архив целиком (их можно читать сканом)
+  async fromOl(q, page) {
+    if (!q) return { items: [], total: 0, next: null };
+    const lang = this.lang === 'ru' ? '&language=rus' : this.lang === 'en' ? '&language=eng' : '';
+    const j = await this.api(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&ebook_access=public&fields=key,title,author_name,first_publish_year,ia,cover_i,language&limit=24&page=${page + 1}${lang}`, this.ctrl?.signal);
+    const cyr = /[а-яё]/i.test(q);
+    const items = (j.docs || []).map(d => {
+      const ia = (d.ia || []).find(x => !/librivox|gutenberg|synapseml|_mp3|audio/i.test(x));
+      if (!ia) return null;
+      const langs = d.language || [];
+      return { src: 'ia', kind: 'book', id: ia, title: d.title, author: (d.author_name || []).slice(0, 2).join(', '), lang: langs.includes('rus') && (cyr || !langs.includes('eng')) ? 'ru' : 'en', extra: d.first_publish_year ? String(d.first_publish_year) : '', cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : `https://archive.org/services/img/${encodeURIComponent(ia)}` };
+    }).filter(Boolean);
+    const total = j.numFound || 0;
+    return { items, total, next: (page + 1) * 24 < total ? () => this.fromOl(q, page + 1) : null };
   },
   pills(list) {
     $('#src-pills').replaceChildren(...list.map((s, i) => el('span', { class: 'src-pill loading', style: `--i:${i}`, dataset: { id: s.id } }, el('i'), s.name, el('b', {}, ''))));
@@ -2131,7 +1922,7 @@ const Catalog = {
   async fromIA(q, page, kind) {
     const cyr = /[а-яё]/i.test(q);
     const langQ = this.lang === 'ru' || (kind === 'ia' && (!q || cyr) && this.lang !== 'en') ? ' AND language:(rus OR russian)' : this.lang === 'en' ? ' AND language:(eng OR english)' : '';
-    const base = kind === 'comics' ? IA_COMICS : IA_SCANS + langQ;
+    const base = kind === 'comics' ? IA_MANGA : IA_SCANS + langQ;
     const terms = q.replace(/[():"]/g, ' ').trim();
     const query = terms ? `${base} AND (title:(${terms}) OR creator:(${terms}) OR subject:(${terms}))` : kind === 'comics' ? base : `${base} AND ${IA_CLASSICS}`;
     const j = await this.api(`https://archive.org/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=language&sort[]=${encodeURIComponent('downloads desc')}&rows=12&page=${page + 1}&output=json`, this.ctrl?.signal);
@@ -2141,7 +1932,7 @@ const Catalog = {
       const lang = /rus/i.test([].concat(d.language || []).join()) ? 'ru' : /jpn|japan/i.test([].concat(d.language || []).join()) ? 'ja' : 'en';
       return {
         src: kind, id: d.identifier, title, lang,
-        kind: kind === 'ia' ? 'scan' : /hokusai|manga/i.test(title) ? 'manga' : 'comic',
+        kind: kind === 'ia' ? 'scan' : 'manga',
         author: [].concat(d.creator || []).slice(0, 2).join(', '), extra: d.year ? String(d.year) : '',
         cover: `https://archive.org/services/img/${encodeURIComponent(d.identifier)}`,
       };
@@ -2227,7 +2018,8 @@ const Catalog = {
           el('span', { class: 'tb' }, el('span', { dataset: { k: it.kind || 'book' } }, KIND_LABEL[it.kind] || 'Книга'), it.lang ? el('span', { class: 'lang' }, it.lang.toUpperCase()) : null),
           el('span', { class: 't' }, it.title), el('span', { class: 'a' }, it.author || ' '), el('span', { class: 'src' }, [SRC_LABEL[it.src], it.extra].filter(Boolean).join(' · '))),
         el('span', { class: 'act-ph', 'aria-hidden': 'true' }));
-      const act = el('button', { class: 'act', html: on ? ICON.check : ICON.plus, 'aria-label': on ? `Открыть «${it.title}»` : `Положить на полку «${it.title}»`, onclick: () => this.add(it, li) });
+      const ext = it.src === 'shiki';
+      const act = el('button', { class: 'act', html: ext ? ICON.arrow : on ? ICON.check : ICON.plus, 'aria-label': ext ? `Где читать «${it.title}»` : on ? `Открыть «${it.title}»` : `Положить на полку «${it.title}»`, onclick: () => (ext ? this.details(it, li) : this.add(it, li)) });
       li.append(card, act);
       return li;
     });
@@ -2290,14 +2082,17 @@ const Catalog = {
     if (src) { const img = el('img', { src, alt: '', style: 'position:absolute;inset:0;z-index:1', referrerpolicy: 'no-referrer' }); img.onerror = () => img.remove(); front.append(img); }
     const b3 = el('div', { class: 'b3d', style: `--cb:${bg}` }, el('div', { class: 'floor' }), el('div', { class: 'back' }), el('div', { class: 'spine' }), el('div', { class: 'pages' }), front);
     const coverBox = el('div', { class: 'sheet-cover' }, b3); tilt(coverBox, b3);
-    const meta = el('div', { class: 'sheet-meta' }, el('span', {}, KIND_LABEL[it.kind] || 'Книга'), el('span', {}, SRC_LABEL[it.src]), it.extra ? el('span', {}, it.extra) : null, el('span', {}, it.src === 'world' ? 'English' : it.src === 'comics' ? 'Комикс' : 'Общественное достояние'));
+    const meta = el('div', { class: 'sheet-meta' }, el('span', {}, KIND_LABEL[it.kind] || 'Книга'), el('span', {}, SRC_LABEL[it.src]), it.extra ? el('span', {}, it.extra) : null, it.src === 'shiki' ? el('span', {}, 'Читается на официальных площадках') : el('span', {}, it.src === 'world' ? 'English' : 'Общественное достояние'));
     const desc = el('p', { class: 'sheet-desc', hidden: true });
     const busy = this.busy.has(key);
-    const go = el('button', { class: 'btn primary big', id: 'sheet-go', onclick: () => this.add(it, li, { open: true }) }, exist ? 'Читать' : busy ? 'Загружаю…' : 'Читать');
-    const shelfBtn = exist
+    const ext = it.src === 'shiki';
+    const go = ext
+      ? el('a', { class: 'btn primary big', id: 'sheet-go', href: it.url, target: '_blank', rel: 'noopener' }, 'Открыть на Shikimori')
+      : el('button', { class: 'btn primary big', id: 'sheet-go', onclick: () => this.add(it, li, { open: true }) }, exist ? 'Читать' : busy ? 'Загружаю…' : 'Читать');
+    const shelfBtn = ext ? null : exist
       ? el('button', { class: 'btn big', onclick: () => { this.closeSheet(true); openBook(exist.id, null); } }, 'Уже на полке')
       : el('button', { class: 'btn big', onclick: () => this.add(it, li) }, 'На полку');
-    const dl = el('div', { class: 'sheet-dl' }, el('h3', {}, 'Скачать'), el('div', { class: 'skeleton', style: 'height:54px;border-radius:14px' }));
+    const dl = el('div', { class: 'sheet-dl' }, el('h3', {}, ext ? 'Где читать легально' : 'Скачать'), el('div', { class: 'skeleton', style: 'height:54px;border-radius:14px' }));
     card.replaceChildren(
       el('button', { class: 'icon-btn sheet-x', 'aria-label': 'Закрыть', html: ICON.close, onclick: () => this.closeSheet() }),
       coverBox,
@@ -2328,7 +2123,27 @@ const Catalog = {
     const link = (fmt, note, href, size) => el('a', { class: 'dl-row', href, target: '_blank', rel: 'noopener', download: '' }, el('span', { class: 'key-sm', html: ICON.down }), el('b', {}, fmt), el('span', { style: 'color:var(--ink-2)' }, note), size ? el('small', {}, size) : null);
     const make = (fmt, note, fn) => el('button', { class: 'dl-row', onclick: async e => { const b = e.currentTarget; const s = b.querySelector('small'); s.textContent = 'собираю…'; try { await fn(p => { s.textContent = Math.round(p * 100) + ' %'; }); s.textContent = 'готово'; } catch (err) { console.error(err); s.textContent = 'ошибка'; Sound.error(); } } }, el('span', { class: 'key-sm', html: ICON.down }), el('b', {}, fmt), el('span', { style: 'color:var(--ink-2)' }, note), el('small', {}, ''));
     const mb = n => n ? (n / 1048576 >= 1 ? (n / 1048576).toFixed(1).replace('.', ',') + ' МБ' : Math.max(1, Math.round(n / 1024)) + ' КБ') : '';
-    if (it.src === 'world') {
+    if (it.src === 'shiki') {
+      const [m, al] = await Promise.all([
+        this.api(`${SHIKI}/api/mangas/${it.id}`).catch(() => null),
+        fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query: 'query($id:Int){Media(idMal:$id,type:MANGA){siteUrl externalLinks{site url language type}}}', variables: { id: +it.id } }) }).then(r => r.json()).catch(() => null),
+      ]);
+      if (m) {
+        const d = (m.description || '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
+        if (d) { desc.textContent = d; desc.hidden = false; }
+        meta.append(...[m.status === 'ongoing' ? 'Выходит' : m.status === 'released' ? 'Завершена' : '', m.volumes ? m.volumes + ' т.' : '', m.score && +m.score ? '★ ' + m.score : '', ...(m.genres || []).slice(0, 3).map(g => g.russian)].filter(Boolean).map(t => el('span', {}, t)));
+      }
+      const links = (al?.data?.Media?.externalLinks || []).filter(l => READ_SITES.test(l.site) || l.type === 'STREAMING' || /official/i.test(l.site));
+      const langCode = { English: 'EN', Japanese: 'JP', Russian: 'RU', Spanish: 'ES', French: 'FR', Chinese: 'CN', Korean: 'KR', Portuguese: 'PT', German: 'DE', Thai: 'TH', Indonesian: 'ID', Vietnamese: 'VI' };
+      const seen = new Set();
+      for (const l of links) {
+        const k = l.site + l.language; if (seen.has(k)) continue; seen.add(k);
+        rows.push(el('a', { class: 'dl-row', href: l.url, target: '_blank', rel: 'noopener' }, el('span', { class: 'key-sm', html: ICON.arrow }), el('b', {}, l.site), el('span', { style: 'color:var(--ink-2)' }, /official/i.test(l.site) ? 'сайт издателя' : 'официально'), el('small', {}, langCode[l.language] || l.language || '')));
+      }
+      if (!rows.length) rows.push(el('p', { class: 'bm-empty', style: 'padding:0' }, 'В открытых базах нет официальной онлайн-версии. Ищите печатное или цифровое издание у издательства.'));
+      rows.push(el('a', { class: 'dl-row', href: it.url, target: '_blank', rel: 'noopener' }, el('span', { class: 'key-sm', html: ICON.arrow }), el('b', {}, 'Shikimori'), el('span', { style: 'color:var(--ink-2)' }, 'описание, главы, отзывы')));
+      if (al?.data?.Media?.siteUrl) rows.push(el('a', { class: 'dl-row', href: al.data.Media.siteUrl, target: '_blank', rel: 'noopener' }, el('span', { class: 'key-sm', html: ICON.arrow }), el('b', {}, 'AniList'), el('span', { style: 'color:var(--ink-2)' }, 'карточка тайтла')));
+    } else if (it.src === 'world') {
       const slug = it.path.replace(/^\/ebooks\//, '').split('/').join('_');
       const base = `${SE}${it.path}/downloads/${slug}`;
       rows.push(link('EPUB', 'для любых читалок', `${base}.epub?source=feed`), link('AZW3', 'для Kindle', `${base}.azw3?source=feed`), link('KEPUB', 'для Kobo', `${base}.kepub.epub?source=feed`));
@@ -2558,6 +2373,6 @@ async function boot() {
   Shelf.render(true);
   requestAnimationFrame(() => { moveInk($('#nav-pill'), $('.tab[aria-selected="true"]')); moveInk($('#chip-ink'), $('#chips .chip[aria-pressed="true"]')); });
 }
-window.__zk = { Shelf, DB, T, PG, importFiles, Narrator, Catalog, buildEpub, epubModel };
+window.__zk = { Shelf, DB, T, PG, importFiles, Catalog, buildEpub, epubModel };
 boot();
 })();

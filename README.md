@@ -1,6 +1,6 @@
 # Zakladka
 
-Читалка книг, манги и комиксов в браузере: EPUB, FB2, TXT, HTML, Markdown, PDF, CBZ и папки сканов. Полка, закладки, озвучка, 3D-полка и каталог произведений в общественном достоянии (Викитека, Standard Ebooks, Internet Archive).
+Читалка книг, манги и комиксов в браузере: EPUB, FB2, TXT, HTML, Markdown, PDF, CBZ и папки сканов. Полка, закладки, 3D-полка и каталог: книги (Викитека, Open Library, Standard Ebooks, Internet Archive) и манга (Shikimori + официальные ссылки из AniList).
 
 Сайт статический, сборка не нужна. Локальный запуск:
 
