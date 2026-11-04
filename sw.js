@@ -1,7 +1,7 @@
 'use strict';
 /* Кэш сайта: страница — сначала из сети (чтобы обновления приходили сразу), файлы с версией и библиотеки — из кэша.
    Запросы каталога (Викитека, архивы, обложки) идут мимо кэша. Номер версии меняет deploy.sh. */
-const CACHE = 'zakladka-1793710946';
+const CACHE = 'zakladka-1793784158';
 const SHELL = ['./', 'index.html'];
 const CDN = /^(cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 
@@ -21,6 +21,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const own = url.origin === self.location.origin;
   if (!own && !CDN.test(url.hostname)) return;
+  // книги и манга из библиотеки и так сохраняются на полке — второй копии в кэше не нужно
+  if (own && /\/library\/(books-|manga\/)/.test(url.pathname)) return;
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put('index.html', c)); return r; }).catch(() => caches.match('index.html')));
     return;

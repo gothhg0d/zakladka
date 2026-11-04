@@ -304,7 +304,7 @@ async function epubOpen(blob) {
   const spine = Array.from(opf.getElementsByTagNameNS('*', 'itemref')).map(r => manifest.get(r.getAttribute('idref'))).filter(it => it && /x?html|xml/i.test(it.type || 'html'));
   const title = txt(opf.getElementsByTagNameNS('*', 'title')[0]);
   const lang = txt(opf.getElementsByTagNameNS('*', 'language')[0]).slice(0, 5);
-  const author = Array.from(opf.getElementsByTagNameNS('*', 'creator')).map(txt).filter(Boolean).slice(0, 2).join(', ');
+  const author = Array.from(opf.getElementsByTagNameNS('*', 'creator')).map(n => txt(n).replace(/^(автор|author)\s+/i, '')).filter(Boolean).slice(0, 2).join(', ');
   let cover = [...manifest.values()].find(i => /cover-image/.test(i.props));
   if (!cover) {
     const meta = Array.from(opf.getElementsByTagNameNS('*', 'meta')).find(m => m.getAttribute('name') === 'cover');
@@ -1780,18 +1780,37 @@ async function findCover(it) {
   return url;
 }
 
-const SRC_LABEL = { ru: 'Викитека', world: 'Standard Ebooks', comics: 'Internet Archive', ia: 'Internet Archive', shiki: 'Shikimori', ol: 'Open Library' };
+const SRC_LABEL = { ru: 'Викитека', world: 'Standard Ebooks', comics: 'Internet Archive', ia: 'Internet Archive', shiki: 'Shikimori', ol: 'Open Library', lib: 'Библиотека Zakladka' };
 const SHIKI = 'https://shikimori.io';
 const SHIKI_KIND = { manga: 'Манга', manhwa: 'Манхва', manhua: 'Маньхуа', one_shot: 'Ваншот', light_novel: 'Ранобэ', novel: 'Новелла', doujin: 'Додзинси' };
 // официальные площадки, где мангу читают легально (их ссылки берём из AniList)
 const READ_SITES = /manga ?plus|viz|shonen jump|k ?manga|comikey|azuki|inkr|mangamo|bookwalker|kodansha|yen press|webtoon|tapas|tappytoon|lezhin|pocket comics|manta|comic walker|piccoma|line manga|kakao|naver|seven seas|j-novel|bilibili|crunchyroll|amazon|kindle|cmoa|ebookjapan|renta|mangatoon|tencent|kuaikan|izneo|glénat|planet manga|xl media|азбука|альт граф|истари|комикс ?стор|libri|readmanga/i;
-const keyOf = it => ({ ru: 'ws:' + it.page, world: 'se:' + it.path, comics: 'ia:' + it.id, ia: 'ia:' + it.id, shiki: 'sh:' + it.id }[it.src]);
+const keyOf = it => ({ ru: 'ws:' + it.page, world: 'se:' + it.path, comics: 'ia:' + it.id, ia: 'ia:' + it.id, shiki: 'sh:' + it.id, lib: 'lib:' + it.id }[it.src]);
 const KIND_LABEL = { book: 'Книга', manga: 'Манга', comic: 'Комикс', scan: 'Скан', manhwa: 'Манхва', manhua: 'Маньхуа' };
 const HINTS = ['Блич', 'Магическая битва', 'Чехов', 'Black Clover', 'Наруто', 'Frankenstein', 'Боруто', 'Пиковая дама', 'Ван-Пис', 'Dracula', 'Атака титанов', 'Толстой'];
 // IA: комиксы ace-comics и старая японская манга (Хокусай и др.) — всё в общественном достоянии
 const IA_MANGA = '(title:"hokusai manga" OR subject:manga) AND mediatype:texts AND format:"Single Page Processed JP2 ZIP" AND date:[1600-01-01 TO 1929-12-31] AND -collection:inlibrary AND -collection:printdisabled';
 const IA_SCANS = 'mediatype:texts AND format:"Single Page Processed JP2 ZIP" AND year:[1700 TO 1925] AND -collection:inlibrary AND -collection:printdisabled AND -subject:manga';
 const IA_CLASSICS = 'creator:(Пушкин OR Гоголь OR Чехов OR Толстой OR Достоевский OR Тургенев OR Лермонтов OR Лесков OR Гончаров OR Pushkin OR Gogol OR Chekhov OR Tolstoy OR Dostoyevsky OR Turgenev OR Lermontov OR Dickens OR Austen OR Twain)';
+/* ——— наша библиотека (library/index.json): книги и манга, которые хранятся на самом сайте ——— */
+const Library = {
+  items: null, loading: null,
+  load() {
+    if (this.items) return Promise.resolve(this.items);
+    this.loading ||= fetch('library/index.json' + (VER ? '?v=' + VER : '')).then(r => (r.ok ? r.json() : { items: [] })).then(j => {
+      this.items = (Array.isArray(j) ? j : j.items || []).map(it => ({ ...it, _hay: norm([it.title, it.author, it.series, it.genre, it.desc].filter(Boolean).join(' ')) }));
+      return this.items;
+    }).catch(() => (this.items = []));
+    return this.loading;
+  },
+  // подборка для пустого поиска: по очереди манга, русская и английская классика, чтобы сразу было видно всё
+  featured(list) {
+    const groups = [list.filter(i => i.kind !== 'book' && (!i.volume || i.volume === 1)), list.filter(i => i.kind === 'book' && i.lang === 'ru'), list.filter(i => i.kind === 'book' && i.lang !== 'ru')];
+    const out = []; for (let i = 0; out.length < list.length && i < 400; i++) for (const g of groups) if (g[i]) out.push(g[i]);
+    return out;
+  },
+};
+const norm = t => String(t || '').toLowerCase().replace(/ё/g, 'е').replace(/[«»"'’.,:;!?()—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
 const Catalog = {
   inited: false, results: [], req: 0, type: store.get('ftype', 'all'), lang: store.get('flang', 'all'), q: '', cursors: new Map(),
   init() {
@@ -1826,13 +1845,40 @@ const Catalog = {
   // источники: у каждого своя выдача, всё сливается в один список
   sources() {
     return [
+      { id: 'lib', name: 'Наша библиотека', type: 'any', langs: ['ru', 'en', 'ja'], run: (q, page) => this.fromLib(q, page) },
       { id: 'ws', name: 'Викитека', type: 'book', langs: ['ru'], run: (q, page) => this.fromWs(q, page) },
       { id: 'ol', name: 'Open Library', type: 'book', langs: ['ru', 'en'], run: (q, page) => this.fromOl(q, page) },
       { id: 'se', name: 'Standard Ebooks', type: 'book', langs: ['en'], run: (q, page) => this.fromSe(q, page) },
       { id: 'sh', name: 'Манга · Shikimori', type: 'manga', langs: ['ru', 'en'], run: (q, page) => this.fromShiki(q, page) },
       { id: 'iam', name: 'Старая манга', type: 'manga', langs: ['en', 'ja'], run: (q, page) => this.fromIA(q, page, 'comics') },
       { id: 'ias', name: 'Сканы изданий', type: 'scan', langs: ['ru', 'en'], run: (q, page) => this.fromIA(q, page, 'ia') },
-    ].filter(s => (this.type === 'all' || s.type === this.type) && (this.lang === 'all' || s.langs.includes(this.lang)));
+    ].filter(s => (this.type === 'all' || s.type === this.type || s.type === 'any') && (this.lang === 'all' || s.langs.includes(this.lang)));
+  },
+  async fromLib(q, page) {
+    const all = await Library.load();
+    const t = this.type, l = this.lang, words = norm(q).split(' ').filter(Boolean);
+    let list = all.filter(i => (t === 'all' || (t === 'book' ? i.kind === 'book' : t === 'manga' ? i.kind !== 'book' : false)) && (l === 'all' || i.lang === l));
+    if (words.length) {
+      list = list.filter(i => words.every(w => i._hay.includes(w)));
+      const first = norm(q);
+      const score = i => (norm(i.title).startsWith(first) ? 0 : norm(i.title).includes(first) ? 1 : norm(i.author).includes(first) ? 2 : 3);
+      list.sort((a, b) => score(a) - score(b) || (a.series === b.series ? (a.volume || 0) - (b.volume || 0) : 0));
+    } else list = Library.featured(list);
+    const per = 24, slice = list.slice(page * per, page * per + per);
+    const mb = n => n ? (n / 1048576).toFixed(1).replace('.', ',') + ' МБ' : '';
+    const items = slice.map(i => ({
+      src: 'lib', kind: i.kind === 'book' ? 'book' : i.kind === 'comic' ? 'comic' : 'manga', lang: i.lang === 'ja' ? 'ja' : i.lang,
+      id: i.id, title: i.title, author: i.author || '', file: i.file, fmt: i.fmt, cover: i.cover, license: i.license, credit: i.credit, source: i.source, desc: i.desc, rtl: i.rtl,
+      extra: [i.series && i.volume ? `${i.kind === 'book' ? 'том' : '№'} ${i.volume}` : '', i.genre, i.year, i.pages ? i.pages + ' стр.' : '', mb(i.size)].filter(Boolean).join(' · '),
+    }));
+    const more = (page + 1) * per < list.length;
+    return { items, total: list.length, next: more ? () => this.fromLib(q, page + 1) : null };
+  },
+  async fetchLib(it, key, onP = () => { }) {
+    const r = await fetch(it.file);
+    if (!r.ok) throw new Error('Файл библиотеки не найден, попробуйте позже');
+    const blob = await readBlob(r, onP);
+    return addBook(it.fmt, blob, it.file.split('/').pop(), { srcKey: key });
   },
   // Shikimori: огромная база манги, манхвы и маньхуа с русскими названиями; читать — по официальным ссылкам
   async fromShiki(q, page) {
@@ -1886,7 +1932,11 @@ const Catalog = {
     }));
     if (req !== this.req) return;
     if (!total) { $('#cat-list').replaceChildren(); this.status(q ? `По запросу «${q}» ничего не нашлось. Проверьте написание или снимите фильтры.` : 'Источники сейчас не отвечают. Полка и свои файлы при этом работают.'); }
-    else this.status(q ? `Нашлось по запросу «${q}»` : 'Подборка из всех источников. Начните вводить название, автора или «manga».');
+    else {
+      const lib = Library.items || [];
+      const books = lib.filter(i => i.kind === 'book').length, manga = lib.length - books;
+      this.status(q ? `Нашлось по запросу «${q}»` : lib.length ? `В нашей библиотеке ${books} ${plural(books, ['книга', 'книги', 'книг'])} и ${manga} ${plural(manga, ['выпуск', 'выпуска', 'выпусков'])} манги и комиксов, плюс миллионы изданий в открытых источниках.` : 'Подборка из всех источников. Начните вводить название или автора.');
+    }
     this.updateMore(req);
   },
   updateMore(req) {
@@ -2045,6 +2095,7 @@ const Catalog = {
       if (this.sheetKey === key) { const g = $('#sheet-go'); if (g) g.textContent = `Загружаю ${pct} %`; }
     };
     const job = (async () => {
+      if (it.src === 'lib') return this.fetchLib(it, key, progress);
       if (it.src === 'ru') return this.fetchRu(it, key, progress);
       if (it.src === 'world') return this.fetchWorld(it, key, progress);
       return this.fetchIA(it, key, progress);
@@ -2082,7 +2133,7 @@ const Catalog = {
     if (src) { const img = el('img', { src, alt: '', style: 'position:absolute;inset:0;z-index:1', referrerpolicy: 'no-referrer' }); img.onerror = () => img.remove(); front.append(img); }
     const b3 = el('div', { class: 'b3d', style: `--cb:${bg}` }, el('div', { class: 'floor' }), el('div', { class: 'back' }), el('div', { class: 'spine' }), el('div', { class: 'pages' }), front);
     const coverBox = el('div', { class: 'sheet-cover' }, b3); tilt(coverBox, b3);
-    const meta = el('div', { class: 'sheet-meta' }, el('span', {}, KIND_LABEL[it.kind] || 'Книга'), el('span', {}, SRC_LABEL[it.src]), it.extra ? el('span', {}, it.extra) : null, it.src === 'shiki' ? el('span', {}, 'Читается на официальных площадках') : el('span', {}, it.src === 'world' ? 'English' : 'Общественное достояние'));
+    const meta = el('div', { class: 'sheet-meta' }, el('span', {}, KIND_LABEL[it.kind] || 'Книга'), el('span', {}, SRC_LABEL[it.src]), it.extra ? el('span', {}, it.extra) : null, it.src === 'shiki' ? el('span', {}, 'Читается на официальных площадках') : it.src === 'lib' ? el('span', {}, 'Хранится на нашем сайте') : el('span', {}, it.src === 'world' ? 'English' : 'Общественное достояние'));
     const desc = el('p', { class: 'sheet-desc', hidden: true });
     const busy = this.busy.has(key);
     const ext = it.src === 'shiki';
@@ -2123,7 +2174,13 @@ const Catalog = {
     const link = (fmt, note, href, size) => el('a', { class: 'dl-row', href, target: '_blank', rel: 'noopener', download: '' }, el('span', { class: 'key-sm', html: ICON.down }), el('b', {}, fmt), el('span', { style: 'color:var(--ink-2)' }, note), size ? el('small', {}, size) : null);
     const make = (fmt, note, fn) => el('button', { class: 'dl-row', onclick: async e => { const b = e.currentTarget; const s = b.querySelector('small'); s.textContent = 'собираю…'; try { await fn(p => { s.textContent = Math.round(p * 100) + ' %'; }); s.textContent = 'готово'; } catch (err) { console.error(err); s.textContent = 'ошибка'; Sound.error(); } } }, el('span', { class: 'key-sm', html: ICON.down }), el('b', {}, fmt), el('span', { style: 'color:var(--ink-2)' }, note), el('small', {}, ''));
     const mb = n => n ? (n / 1048576 >= 1 ? (n / 1048576).toFixed(1).replace('.', ',') + ' МБ' : Math.max(1, Math.round(n / 1024)) + ' КБ') : '';
-    if (it.src === 'shiki') {
+    if (it.src === 'lib') {
+      if (it.desc) { desc.textContent = it.desc; desc.hidden = false; }
+      if (it.license) meta.append(el('span', {}, it.license));
+      rows.push(el('a', { class: 'dl-row', href: it.file, download: fileName(it.title, it.fmt) }, el('span', { class: 'key-sm', html: ICON.down }), el('b', {}, it.fmt.toUpperCase()), el('span', { style: 'color:var(--ink-2)' }, 'с нашего сайта'), el('small', {}, '')));
+      if (it.credit) rows.push(el('p', { class: 'bm-empty', style: 'padding:0;font-size:13px' }, it.credit));
+      if (it.source) rows.push(el('a', { class: 'dl-row', href: it.source, target: '_blank', rel: 'noopener' }, el('span', { class: 'key-sm', html: ICON.arrow }), el('b', {}, 'Источник'), el('span', { style: 'color:var(--ink-2)' }, new URL(it.source).hostname.replace(/^www\./, ''))));
+    } else if (it.src === 'shiki') {
       const [m, al] = await Promise.all([
         this.api(`${SHIKI}/api/mangas/${it.id}`).catch(() => null),
         fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query: 'query($id:Int){Media(idMal:$id,type:MANGA){siteUrl externalLinks{site url language type}}}', variables: { id: +it.id } }) }).then(r => r.json()).catch(() => null),
