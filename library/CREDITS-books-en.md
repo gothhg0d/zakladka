@@ -22,8 +22,9 @@ come from two sources. The `credit`, `license` and `source` fields of each entry
 ## Project Gutenberg — https://www.gutenberg.org
 
 - Entries with `"credit": "Project Gutenberg, gutenberg.org"` were downloaded from
-  Project Gutenberg (EPUB3 "with images" edition, `pg<id>-images-3.epub`; for a few large
-  illustrated books the smaller no-images edition `pg<id>.epub` was used instead).
+  Project Gutenberg (EPUB3 "with images" edition, `pg<id>-images-3.epub`; where that file was
+  large (over about 1 to 2.5 MB), the smaller no-images edition `pg<id>.epub` was used to
+  stay within the size budget).
   Metadata, popularity order and summaries came from Gutendex (https://gutendex.com).
 - License: these works are in the **public domain in the USA**. Each file is distributed
   unmodified and includes the **Project Gutenberg License**
