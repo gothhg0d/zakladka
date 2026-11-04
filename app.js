@@ -1878,7 +1878,8 @@ const Catalog = {
     const r = await fetch(it.file);
     if (!r.ok) throw new Error('Файл библиотеки не найден, попробуйте позже');
     const blob = await readBlob(r, onP);
-    return addBook(it.fmt, blob, it.file.split('/').pop(), { srcKey: key });
+    // название и автор — из нашего каталога (в файлах они бывают на другом языке или с пометками)
+    return addBook(it.fmt, blob, it.file.split('/').pop(), { srcKey: key, title: it.title, ...(it.author ? { author: it.author } : {}) });
   },
   // Shikimori: огромная база манги, манхвы и маньхуа с русскими названиями; читать — по официальным ссылкам
   async fromShiki(q, page) {
