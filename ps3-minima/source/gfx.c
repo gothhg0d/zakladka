@@ -408,13 +408,15 @@ void gfx_backdrop(Canvas *c, const Image *img, int ox, int oy, float alpha)
     if (!img || !img->px)
         return;
     uint32_t a = (uint32_t)(clamp01(alpha) * 256.0f);
-    for (int y = 0; y < c->h; y++) {
+    if (ox < 0) ox = 0;
+    for (int y = c->cy0; y < c->cy1; y++) {
         int sy = y + oy;
         if (sy < 0) sy = 0;
         if (sy >= img->h) sy = img->h - 1;
-        const uint32_t *src = img->px + (size_t)sy * img->w + (ox < 0 ? 0 : ox);
-        uint32_t *dst = c->px + (size_t)y * c->w;
-        int n = c->w < img->w - ox ? c->w : img->w - ox;
+        const uint32_t *src = img->px + (size_t)sy * img->w + ox + c->cx0;
+        uint32_t *dst = c->px + (size_t)y * c->w + c->cx0;
+        int n = c->cx1 - c->cx0;
+        if (n > img->w - ox - c->cx0) n = img->w - ox - c->cx0;
         if (a >= 256) {
             memcpy(dst, src, (size_t)n * 4);
         } else if (a) {

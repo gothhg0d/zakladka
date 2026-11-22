@@ -10,6 +10,7 @@
 
 #include <dirent.h>
 #include <png.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,6 +126,22 @@ const char *plat_games_dir(void) { return games; }
 void plat_launch(const char *p) { printf("launch %s\n", p); }
 void plat_power(int op) { printf("power %d\n", op); }
 void plat_audio_start(void) {}
+
+typedef struct { void (*fn)(int, void *); void *arg; } Job;
+static void *run_job(void *j) { ((Job *)j)->fn(0, ((Job *)j)->arg); return NULL; }
+
+void plat_parallel(void (*fn)(int part, void *arg), void *arg)
+{
+    Job job = { fn, arg };
+    pthread_t t;
+    if (pthread_create(&t, NULL, run_job, &job) != 0) {
+        fn(0, arg);
+        fn(1, arg);
+        return;
+    }
+    fn(1, arg);
+    pthread_join(t, NULL);
+}
 
 uint32_t *plat_load_png(const char *path, int *w, int *h)
 {

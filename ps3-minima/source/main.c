@@ -126,6 +126,8 @@ typedef struct {
     uint64_t disk_total, disk_avail;
     int disk_ok;
     float intro;
+    float frame_avg;         /* smoothed frame time, seconds */
+    int lite;                /* set when the console can't keep up: cheaper effects */
     Particle parts[PARTICLES];
 } UI;
 
@@ -780,11 +782,15 @@ static void draw_row(Canvas *c, float alpha, float shift)
                 gfx_shadow(c, r.x, r.y, r.w, r.h, radius, U(18), 0.55f * a);
             }
             Blit b = { r.x, r.y, r.w, r.h, tilt, radius, a, pass ? ui.shine : -1, 0.7f + 0.3f * f, 0 };
+            if (ui.lite)
+                b.shine = -1;
             gfx_image(c, img, &b);
-            Blit refl = b;
-            refl.reflect = 1;
-            refl.shine = -1;
-            gfx_image(c, img, &refl);
+            if (!ui.lite) {
+                Blit refl = b;
+                refl.reflect = 1;
+                refl.shine = -1;
+                gfx_image(c, img, &refl);
+            }
             if (pass)
                 gfx_rrect_stroke(c, r.x - U(4), r.y - U(4), r.w + U(8), r.h + U(8), radius + U(4), U(2.5f),
                                  ink(0.95f * a));
@@ -846,7 +852,8 @@ static void draw_particles(Canvas *c)
         Particle *p = &ui.parts[i];
         float tw = 0.5f + 0.5f * sinf(ui.time * 1.3f + p->phase);
         float x = U(p->x), y = U(p->y);
-        gfx_disc(c, x, y, U(p->r) * 2.6f, col_alpha(col, 0.06f * tw));
+        if (!ui.lite)
+            gfx_disc(c, x, y, U(p->r) * 2.6f, col_alpha(col, 0.06f * tw));
         gfx_disc(c, x, y, U(p->r), col_alpha(0xFFFFFFFF, 0.35f * tw));
     }
 }
@@ -921,7 +928,8 @@ static void draw_launch(Canvas *c)
     gfx_image(c, item_image(TAB_GAMES, ui.pending_app), &b);
 }
 
-static void render(Canvas *c)
+/* Anything that allocates or caches happens here, before the (multi-threaded) render. */
+static void prepare_frame(void)
 {
     if (ui.backdrop_theme != ui.cfg.theme) {
         build_backdrop();
@@ -930,6 +938,11 @@ static void render(Canvas *c)
         image_free(&ui.hero);
         ui.hero_for = -2;           /* re-tint the game art for the new theme */
     }
+}
+
+/* Draws only the rows inside c's clip rectangle; must not change shared state. */
+static void render(Canvas *c)
+{
     float drift = ui.cfg.motion ? sinf(ui.time * 0.07f) * 0.5f : 0;
     int px = parallax();
     int ox = (int)clampf(px + drift * px - ui.hl[ui.tab] * U(3), 0, 2 * px);
@@ -955,6 +968,18 @@ static void render(Canvas *c)
     draw_modal(c);
     if (ui.fade > 0.001f)
         gfx_rect(c, 0, 0, c->w, c->h, col_alpha(0xFF000000, ui.fade));
+}
+
+/* The screen is cut into interleaved horizontal bands so both PPU threads get a fair
+ * share of the expensive card row and of the cheaper text area. */
+#define BANDS 8
+static void render_part(int part, void *arg)
+{
+    Canvas c = *(Canvas *)arg;
+    for (int b = part; b < BANDS; b += 2) {
+        gfx_clip(&c, 0, c.h * b / BANDS, c.w, c.h * (b + 1) / BANDS);
+        render(&c);
+    }
 }
 
 /* ---------------------------------------------------------------- input */
@@ -985,6 +1010,9 @@ static void refresh_library(int announce)
     for (int i = 0; i < ui.lib.count; i++)
         if (!strcmp(ui.lib.items[i].title_id, keep))
             ui.sel[TAB_GAMES] = i;
+    for (int i = 0; i < ui.lib.count; i++)
+        if (!ui.lib.items[i].icon.px)
+            fallback_card(i);
     ui.hero_for = -2;
     ui.disk_ok = plat_disk_space(&ui.disk_total, &ui.disk_avail) == 0;
     if (announce) {
@@ -1129,6 +1157,12 @@ int main(int argc, char **argv)
         float dt = clampf((float)(now - last) / 1e6f, 0, 0.05f);
         last = now;
         ui.time += dt;
+        /* Below ~45 fps for a few seconds: switch to cheaper effects for good. */
+        ui.frame_avg += (dt - ui.frame_avg) * 0.02f;
+        if (!ui.lite && ui.time > 4 && ui.frame_avg > 0.022f) {
+            ui.lite = 1;
+            toast("Lighter effects for smoother motion");
+        }
 
         uint32_t cur = plat_buttons(), pressed = cur & ~prev, repeat = pressed;
         for (int b = 0; b < 10; b++) {           /* auto-repeat for d-pad and L1/R1 */
@@ -1195,8 +1229,8 @@ int main(int argc, char **argv)
         }
 
         canvas.px = plat_backbuffer();
-        gfx_unclip(&canvas);
-        render(&canvas);
+        prepare_frame();
+        plat_parallel(render_part, &canvas);
         plat_present();
         if (!ui.cfg.motion)
             usleep(8000);

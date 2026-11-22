@@ -14,6 +14,7 @@
 #include <io/pad.h>
 #include <pngdec/pngdec.h>
 #include <sys/event_queue.h>
+#include <sys/sem.h>
 #include <sys/thread.h>
 #include <sysmodule/sysmodule.h>
 #include <lv2/sysfs.h>
@@ -88,17 +89,27 @@ int plat_init(int *w, int *h)
     videoResolution res;
     if (videoGetState(0, 0, &state) != 0 || state.state != 0)
         return -1;
-    if (videoGetResolution(state.displayMode.resolution, &res) != 0)
-        return -1;
-
     videoConfiguration vcfg;
     memset(&vcfg, 0, sizeof vcfg);
-    vcfg.resolution = state.displayMode.resolution;
     vcfg.format = VIDEO_BUFFER_FORMAT_XRGB;
-    vcfg.pitch = res.width * 4;
     vcfg.aspect = state.displayMode.aspect;
-    if (videoConfigure(0, &vcfg, NULL, 0) != 0)
-        return -1;
+    /* Everything is drawn by the CPU, so 1080p costs 2.25x the work of 720p. On a 1080p
+     * display ask for 720p (every HD TV takes it and scales up); fall back if refused. */
+    int configured = 0;
+    if (state.displayMode.resolution == VIDEO_RESOLUTION_1080 &&
+        videoGetResolution(VIDEO_RESOLUTION_720, &res) == 0) {
+        vcfg.resolution = VIDEO_RESOLUTION_720;
+        vcfg.pitch = res.width * 4;
+        configured = videoConfigure(0, &vcfg, NULL, 0) == 0;
+    }
+    if (!configured) {
+        if (videoGetResolution(state.displayMode.resolution, &res) != 0)
+            return -1;
+        vcfg.resolution = state.displayMode.resolution;
+        vcfg.pitch = res.width * 4;
+        if (videoConfigure(0, &vcfg, NULL, 0) != 0)
+            return -1;
+    }
 
     width = res.width;
     height = res.height;
@@ -351,4 +362,57 @@ static void audio_stop(void)
     audioPortClose(audio_port);
     sysEventQueueDestroy(audio_queue, 0);
     audioQuit();
+}
+
+/* ---- second render thread: the PPU runs two hardware threads ---- */
+
+static sys_sem_t work_sem, done_sem;
+static sys_ppu_thread_t worker_tid;
+static void (*work_fn)(int, void *);
+static void *work_arg;
+static volatile int worker_ok;
+
+static void worker(void *unused)
+{
+    (void)unused;
+    for (;;) {
+        sysSemWait(work_sem, 0);
+        if (!work_fn)
+            break;
+        work_fn(0, work_arg);
+        sysSemPost(done_sem, 1);
+    }
+    sysThreadExit(0);
+}
+
+static void worker_start(void)
+{
+    sys_sem_attr_t attr;
+    memset(&attr, 0, sizeof attr);
+    attr.attr_protocol = SYS_SEM_ATTR_PROTOCOL;
+    attr.attr_pshared = SYS_SEM_ATTR_PSHARED;
+    if (sysSemCreate(&work_sem, &attr, 0, 1) != 0 || sysSemCreate(&done_sem, &attr, 0, 1) != 0)
+        return;
+    worker_ok = sysThreadCreate(&worker_tid, worker, NULL, 900, 0x10000, 0, "minima_render") == 0;
+}
+
+void plat_parallel(void (*fn)(int part, void *arg), void *arg)
+{
+    if (!worker_ok) {
+        static int tried;
+        if (!tried) {
+            tried = 1;
+            worker_start();
+        }
+    }
+    if (!worker_ok) {
+        fn(0, arg);
+        fn(1, arg);
+        return;
+    }
+    work_fn = fn;
+    work_arg = arg;
+    sysSemPost(work_sem, 1);
+    fn(1, arg);
+    sysSemWait(done_sem, 0);
 }

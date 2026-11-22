@@ -41,6 +41,8 @@ void plat_launch(const char *eboot_path);
 uint32_t *plat_load_png(const char *path, int *w, int *h);
 /* Starts the audio output; it pulls samples from sound_mix() on its own thread. */
 void plat_audio_start(void);
+/* Runs fn(0, arg) on a second hardware thread and fn(1, arg) on this one, then waits for both. */
+void plat_parallel(void (*fn)(int part, void *arg), void *arg);
 void plat_power(int op);
 
 #endif
