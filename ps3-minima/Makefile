@@ -30,7 +30,7 @@ SDK_DEFS  := $(shell grep -qs 'gcmContextData *\* *rsxInit' $(PSL1GHT_INC)/rsx/r
 CFLAGS    = -O2 -Wall -std=gnu99 -mcpu=cell $(MACHDEP) $(SDK_DEFS) $(INCLUDE)
 CXXFLAGS  = $(CFLAGS)
 LDFLAGS   = $(MACHDEP) -Wl,-Map,$(notdir $@).map
-LIBS      := -lrsx -lgcm_sys -lpngdec -laudio -lsysmodule -lio -lsysutil -lrt -llv2 -lm
+LIBS      := -lrsx -lgcm_sys -lpngdec -laudio -lsysmodule -lsysfs -lio -lsysutil -lrt -llv2 -lm
 LIBDIRS   :=
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
