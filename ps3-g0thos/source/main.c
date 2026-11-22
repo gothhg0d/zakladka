@@ -1,4 +1,4 @@
-/* Minima — a home screen for the PlayStation 3 in the spirit of modern consoles:
+/* G0THOS — a home screen for the PlayStation 3 in the spirit of modern consoles:
  * a row of cards, full-screen art, depth, motion and sound. */
 
 #include <math.h>
@@ -13,9 +13,9 @@
 #include "platform.h"
 #include "sound.h"
 
-#define SHELL_NAME "Minima"
+#define SHELL_NAME "G0THOS"
 #define SHELL_VERSION "2.0"
-#define SELF_TITLE_ID "MNMA00001"
+#define SELF_TITLE_ID "GTHS00001"
 
 extern const uint8_t font_bin[];
 extern const uint8_t font_bin_end[];
@@ -635,9 +635,9 @@ static void item_text(int tab, int i, char *title, size_t tcap, char *value, siz
     } else if (tab == TAB_SYSTEM) {
         static const char *names[SYS_COUNT] = { "Console", "Display", "Storage", "Library", "Session", "Shell" };
         static const char *notes[SYS_COUNT] = {
-            "The machine Minima is running on.", "The video mode Minima draws in.",
+            "The machine G0THOS is running on.", "The video mode G0THOS draws in.",
             "Space left on the internal hard drive.", "Applications found in /dev_hdd0/game.",
-            "Time since Minima started.", "This home screen." };
+            "Time since G0THOS started.", "This home screen." };
         snprintf(title, tcap, "%s", names[i]);
         *note = notes[i];
         switch (i) {
@@ -680,9 +680,9 @@ static void item_text(int tab, int i, char *title, size_t tcap, char *value, siz
         }
     } else {
         static const char *names[PWR_COUNT] = { "Return to XMB", "Restart", "Power off" };
-        static const char *notes[PWR_COUNT] = { "Close Minima and go back to the XMB.",
-                                                "Restart the console. Minima asks first.",
-                                                "Turn the console off. Minima asks first." };
+        static const char *notes[PWR_COUNT] = { "Close G0THOS and go back to the XMB.",
+                                                "Restart the console. G0THOS asks first.",
+                                                "Turn the console off. G0THOS asks first." };
         snprintf(title, tcap, "%s", names[i]);
         *note = notes[i];
     }

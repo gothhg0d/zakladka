@@ -3,8 +3,8 @@ build/
 *.self
 *.pkg
 *.map
-sim/minima-sim
+sim/g0thos-sim
 sim/*.o
 sim/*.ppm
 sim/mock/
-sim-minima.cfg
+sim-g0thos.cfg

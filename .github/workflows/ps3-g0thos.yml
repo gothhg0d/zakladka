@@ -1,10 +1,10 @@
-name: PS3 Minima
+name: PS3 G0THOS
 
 on:
   push:
-    paths: ["ps3-minima/**", ".github/workflows/ps3-minima.yml"]
+    paths: ["ps3-g0thos/**", ".github/workflows/ps3-g0thos.yml"]
   pull_request:
-    paths: ["ps3-minima/**", ".github/workflows/ps3-minima.yml"]
+    paths: ["ps3-g0thos/**", ".github/workflows/ps3-g0thos.yml"]
   workflow_dispatch:
 
 jobs:
@@ -15,16 +15,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with PSL1GHT
         run: |
-          docker run --rm -v "$PWD/ps3-minima:/src" -w /src flipacholas/ps3devextra:latest \
+          docker run --rm -v "$PWD/ps3-g0thos:/src" -w /src flipacholas/ps3devextra:latest \
             sh -c 'make && make pkg'
-          ls -la ps3-minima/*.self ps3-minima/*.pkg
+          ls -la ps3-g0thos/*.self ps3-g0thos/*.pkg
       - uses: actions/upload-artifact@v4
         with:
-          name: minima-ps3
+          name: g0thos-ps3
           path: |
-            ps3-minima/minima.self
-            ps3-minima/minima.pkg
-            ps3-minima/minima.gnpdrm.pkg
+            ps3-g0thos/g0thos.self
+            ps3-g0thos/g0thos.pkg
+            ps3-g0thos/g0thos.gnpdrm.pkg
 
   preview:
     name: Desktop preview
@@ -32,14 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Render screenshots
-        working-directory: ps3-minima/sim
+        working-directory: ps3-g0thos/sim
         run: |
           sudo apt-get install -y libpng-dev && pip install pillow
           python3 make_mock.py mock/game
           make
-          ./minima-sim -r 1920x1080 -g mock/game -o shot 'w100,shot,R,R,w50,shot,R1,w50,shot,R1,X,w60,shot,ST,w20,R,R,X,w40,shot'
+          ./g0thos-sim -r 1920x1080 -g mock/game -o shot 'w100,shot,R,R,w50,shot,R1,w50,shot,R1,X,w60,shot,ST,w20,R,R,X,w40,shot'
           python3 -c "import glob; from PIL import Image; [Image.open(f).save(f[:-4] + '.png') for f in glob.glob('shot*.ppm')]"
       - uses: actions/upload-artifact@v4
         with:
-          name: minima-preview
-          path: ps3-minima/sim/shot*.png
+          name: g0thos-preview
+          path: ps3-g0thos/sim/shot*.png

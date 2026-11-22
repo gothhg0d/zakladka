@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws ICON0.PNG (320x176), the tile the XMB shows for Minima."""
+"""Draws ICON0.PNG (320x176), the tile the XMB shows for G0THOS."""
 import os, sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -21,7 +21,7 @@ for y in range(H):
 
 d = ImageDraw.Draw(img)
 font = ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts", "AALogotyperRounded.otf"), 44 * SS)
-text = "minima"
+text = "G0THOS"
 tw = d.textlength(text, font=font)
 x, y = (W - tw) / 2 + 8 * SS, H / 2
 r = 5 * SS

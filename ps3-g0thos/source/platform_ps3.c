@@ -31,7 +31,7 @@
 SYS_PROCESS_PARAM(1001, 0x100000);
 
 #define GAMES_DIR "/dev_hdd0/game"
-#define CONFIG_PATH "/dev_hdd0/game/MNMA00001/USRDIR/minima.cfg"
+#define CONFIG_PATH "/dev_hdd0/game/GTHS00001/USRDIR/g0thos.cfg"
 
 #define CB_SIZE 0x100000
 #define HOST_SIZE (32 * 1024 * 1024)
@@ -346,7 +346,7 @@ void plat_audio_start(void)
     sysEventQueueDrain(audio_queue);
     audioPortStart(audio_port);
     audio_running = 1;
-    if (sysThreadCreate(&audio_tid, audio_thread, NULL, 1000, 0x8000, THREAD_JOINABLE, "minima_audio") != 0)
+    if (sysThreadCreate(&audio_tid, audio_thread, NULL, 1000, 0x8000, THREAD_JOINABLE, "g0thos_audio") != 0)
         audio_running = 0;
 }
 
@@ -393,7 +393,7 @@ static void worker_start(void)
     attr.attr_pshared = SYS_SEM_ATTR_PSHARED;
     if (sysSemCreate(&work_sem, &attr, 0, 1) != 0 || sysSemCreate(&done_sem, &attr, 0, 1) != 0)
         return;
-    worker_ok = sysThreadCreate(&worker_tid, worker, NULL, 900, 0x10000, 0, "minima_render") == 0;
+    worker_ok = sysThreadCreate(&worker_tid, worker, NULL, 900, 0x10000, 0, "g0thos_render") == 0;
 }
 
 void plat_parallel(void (*fn)(int part, void *arg), void *arg)

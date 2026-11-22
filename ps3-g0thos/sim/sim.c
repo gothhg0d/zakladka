@@ -1,4 +1,4 @@
-/* Desktop stand-in for platform_ps3.c: renders Minima headless and writes screenshots.
+/* Desktop stand-in for platform_ps3.c: renders G0THOS headless and writes screenshots.
  *
  *   sim [-r 1280x720] [-g games_dir] [-o out_prefix] SCRIPT
  *
@@ -121,7 +121,7 @@ int plat_disk_space(uint64_t *total, uint64_t *avail)
     return 0;
 }
 
-const char *plat_config_path(void) { return "sim-minima.cfg"; }
+const char *plat_config_path(void) { return "sim-g0thos.cfg"; }
 const char *plat_games_dir(void) { return games; }
 void plat_launch(const char *p) { printf("launch %s\n", p); }
 void plat_power(int op) { printf("power %d\n", op); }

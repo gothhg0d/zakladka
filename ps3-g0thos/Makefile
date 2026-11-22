@@ -1,7 +1,7 @@
 #---------------------------------------------------------------------------------
-# Minima — PSL1GHT build. Needs the ps3toolchain + PSL1GHT environment ($PS3DEV, $PSL1GHT).
-#   make        -> minima.self (run with ps3load)
-#   make pkg    -> minima.pkg  (install from the XMB "Package Manager")
+# G0THOS — PSL1GHT build. Needs the ps3toolchain + PSL1GHT environment ($PS3DEV, $PSL1GHT).
+#   make        -> g0thos.self (run with ps3load)
+#   make pkg    -> g0thos.pkg  (install from the XMB "Package Manager")
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 ifeq ($(strip $(PSL1GHT)),)
@@ -10,14 +10,14 @@ endif
 
 include $(PSL1GHT)/ppu_rules
 
-TARGET    := minima
+TARGET    := g0thos
 BUILD     := build
 SOURCE    := source
 DATA      := data
 INCLUDES  := source
 
-TITLE     := Minima
-APPID     := MNMA00001
+TITLE     := G0THOS
+APPID     := GTHS00001
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
 ICON0     := $(CURDIR)/ICON0.PNG
 SFOXML    := $(CURDIR)/sfo.xml

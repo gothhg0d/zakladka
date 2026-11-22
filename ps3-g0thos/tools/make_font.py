@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rasterize AA Logotyper Rounded (with Inter as fallback) into data/font.bin, the glyph atlas Minima draws text with.
+"""Rasterize AA Logotyper Rounded (with Inter as fallback) into data/font.bin, the glyph atlas G0THOS draws text with.
 
 Format (big-endian, read byte by byte so it works on any host):
   "MFNT" u16 face_count
