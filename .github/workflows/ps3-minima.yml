@@ -1,0 +1,45 @@
+name: PS3 Minima
+
+on:
+  push:
+    paths: ["ps3-minima/**", ".github/workflows/ps3-minima.yml"]
+  pull_request:
+    paths: ["ps3-minima/**", ".github/workflows/ps3-minima.yml"]
+  workflow_dispatch:
+
+jobs:
+  ps3:
+    name: Build .self and .pkg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with PSL1GHT
+        run: |
+          docker run --rm -v "$PWD/ps3-minima:/src" -w /src flipacholas/ps3devextra:latest \
+            sh -c 'make && make pkg'
+          ls -la ps3-minima/*.self ps3-minima/*.pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minima-ps3
+          path: |
+            ps3-minima/minima.self
+            ps3-minima/minima.pkg
+            ps3-minima/minima.gnpdrm.pkg
+
+  preview:
+    name: Desktop preview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render screenshots
+        working-directory: ps3-minima/sim
+        run: |
+          pip install pillow
+          python3 make_mock.py mock/game
+          make
+          ./minima-sim -r 1920x1080 -g mock/game -o shot 'w90,shot,R,w30,shot,R,X,w60,shot,ST,w20,D,D,X,w40,shot'
+          python3 -c "import glob; from PIL import Image; [Image.open(f).save(f[:-4] + '.png') for f in glob.glob('shot*.ppm')]"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minima-preview
+          path: ps3-minima/sim/shot*.png

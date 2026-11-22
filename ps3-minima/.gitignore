@@ -1,0 +1,10 @@
+build/
+*.elf
+*.self
+*.pkg
+*.map
+sim/minima-sim
+sim/*.o
+sim/*.ppm
+sim/mock/
+sim-minima.cfg
