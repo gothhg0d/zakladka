@@ -36,6 +36,11 @@ const char *plat_games_dir(void);
 
 /* Exits the shell and starts the given EBOOT.BIN. Returns only on failure. */
 void plat_launch(const char *eboot_path);
+
+/* Decodes a PNG into malloc'd 0xAARRGGBB pixels (caller frees). NULL on failure. */
+uint32_t *plat_load_png(const char *path, int *w, int *h);
+/* Starts the audio output; it pulls samples from sound_mix() on its own thread. */
+void plat_audio_start(void);
 void plat_power(int op);
 
 #endif

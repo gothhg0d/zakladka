@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-enum { FACE_LABEL, FACE_SMALL, FACE_BODY, FACE_TITLE, FACE_COUNT };
+enum { FACE_LABEL, FACE_SMALL, FACE_BODY, FACE_TITLE, FACE_HERO, FACE_COUNT };
 
 typedef struct {
     uint32_t cp;

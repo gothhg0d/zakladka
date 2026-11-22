@@ -20,7 +20,7 @@ for y in range(H):
         px[x, y] = tuple(int(b + (a - b) * g) for b, a in zip(base, acc))
 
 d = ImageDraw.Draw(img)
-font = ImageFont.truetype(os.path.join(FONT_DIR, "Inter-ExtraLight.otf"), 46 * SS)
+font = ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts", "AALogotyperRounded.otf"), 44 * SS)
 text = "minima"
 tw = d.textlength(text, font=font)
 x, y = (W - tw) / 2 + 8 * SS, H / 2

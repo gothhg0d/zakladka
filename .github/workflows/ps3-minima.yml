@@ -34,10 +34,10 @@ jobs:
       - name: Render screenshots
         working-directory: ps3-minima/sim
         run: |
-          pip install pillow
+          sudo apt-get install -y libpng-dev && pip install pillow
           python3 make_mock.py mock/game
           make
-          ./minima-sim -r 1920x1080 -g mock/game -o shot 'w90,shot,R,w30,shot,R,X,w60,shot,ST,w20,D,D,X,w40,shot'
+          ./minima-sim -r 1920x1080 -g mock/game -o shot 'w100,shot,R,R,w50,shot,R1,w50,shot,R1,X,w60,shot,ST,w20,R,R,X,w40,shot'
           python3 -c "import glob; from PIL import Image; [Image.open(f).save(f[:-4] + '.png') for f in glob.glob('shot*.ppm')]"
       - uses: actions/upload-artifact@v4
         with:

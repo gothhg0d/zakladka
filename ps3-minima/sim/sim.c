@@ -9,6 +9,7 @@
  */
 
 #include <dirent.h>
+#include <png.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,6 +124,26 @@ const char *plat_config_path(void) { return "sim-minima.cfg"; }
 const char *plat_games_dir(void) { return games; }
 void plat_launch(const char *p) { printf("launch %s\n", p); }
 void plat_power(int op) { printf("power %d\n", op); }
+void plat_audio_start(void) {}
+
+uint32_t *plat_load_png(const char *path, int *w, int *h)
+{
+    png_image im;
+    memset(&im, 0, sizeof im);
+    im.version = PNG_IMAGE_VERSION;
+    if (!png_image_begin_read_from_file(&im, path))
+        return NULL;
+    im.format = PNG_FORMAT_BGRA; /* little-endian bytes B,G,R,A == 0xAARRGGBB as uint32 */
+    uint32_t *px = malloc(PNG_IMAGE_SIZE(im));
+    if (!px || !png_image_finish_read(&im, NULL, px, 0, NULL)) {
+        free(px);
+        png_image_free(&im);
+        return NULL;
+    }
+    *w = (int)im.width;
+    *h = (int)im.height;
+    return px;
+}
 
 int sim_main(int argc, char **argv);
 

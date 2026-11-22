@@ -25,6 +25,28 @@ void gfx_disc(Canvas *c, float cx, float cy, float r, uint32_t col);
 void gfx_ring(Canvas *c, float cx, float cy, float r, float t, uint32_t col);
 void gfx_line(Canvas *c, float x0, float y0, float x1, float y1, float t, uint32_t col);
 
+/* ---- images (0xAARRGGBB) ---- */
+typedef struct { uint32_t *px; int w, h; } Image;
+
+typedef struct {
+    float x, y, w, h;   /* destination box (before tilt) */
+    float tilt;         /* -1..1: turns the card around its vertical axis, 0 = flat */
+    float radius;       /* corner radius in destination pixels */
+    float alpha;
+    float shine;        /* position of a diagonal light sweep, 0..1 across the card; <0 = none */
+    float bright;       /* colour multiplier, 1 = unchanged */
+    int reflect;        /* draw as a fading mirror image below the box */
+} Blit;
+
+void gfx_image(Canvas *c, const Image *img, const Blit *b);
+/* Soft drop shadow under a rounded box. */
+void gfx_shadow(Canvas *c, float x, float y, float w, float h, float r, float spread, float alpha);
+/* Full-screen backdrop with a parallax offset; alpha < 1 cross-fades over what is there. */
+void gfx_backdrop(Canvas *c, const Image *img, int ox, int oy, float alpha);
+/* Resamples src to cover a w x h box (centre crop). */
+Image image_cover(const Image *src, int w, int h);
+void image_free(Image *img);
+
 /* Text: y is the baseline. tracking is extra pixels between glyphs. Returns the advance. */
 float text_draw(Canvas *c, int face, float x, float y, const char *s, uint32_t col, float tracking);
 float text_width(int face, const char *s, float tracking);

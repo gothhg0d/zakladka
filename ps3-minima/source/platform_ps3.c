@@ -10,7 +10,12 @@
 
 #include <ppu-lv2.h>
 #include <ppu-types.h>
+#include <audio/audio.h>
 #include <io/pad.h>
+#include <pngdec/pngdec.h>
+#include <sys/event_queue.h>
+#include <sys/thread.h>
+#include <sysmodule/sysmodule.h>
 #include <lv2/sysfs.h>
 #include <rsx/rsx.h>
 #include <sys/process.h>
@@ -20,6 +25,7 @@
 #include <sysutil/video.h>
 
 #include "platform.h"
+#include "sound.h"
 
 SYS_PROCESS_PARAM(1001, 0x100000);
 
@@ -109,6 +115,7 @@ int plat_init(int *w, int *h)
     if (!back)
         return -1;
 
+    sysModuleLoad(SYSMODULE_PNGDEC);
     ioPadInit(7);
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sysutil_cb, NULL);
 
@@ -144,8 +151,11 @@ void plat_present(void)
     cur_fb ^= 1;
 }
 
+static void audio_stop(void);
+
 void plat_exit(void)
 {
+    audio_stop();
     if (context) {
         if (!first_flip)
             wait_flip();
@@ -153,6 +163,7 @@ void plat_exit(void)
         context = NULL;
     }
     ioPadEnd();
+    sysModuleUnload(SYSMODULE_PNGDEC);
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
 }
 
@@ -265,4 +276,79 @@ void plat_power(int op)
 {
     /* 0x1100 powers off, 0x1200 is a full restart. */
     sys_sm_shutdown(op == POWER_OFF ? 0x1100 : 0x1200);
+}
+
+uint32_t *plat_load_png(const char *path, int *w, int *h)
+{
+    pngData png;
+    memset(&png, 0, sizeof png);
+    if (pngLoadFromFile(path, &png) != 0 || !png.bmp_out)
+        return NULL;
+    uint32_t *out = malloc((size_t)png.width * png.height * 4);
+    if (out)
+        for (u32 y = 0; y < png.height; y++)
+            memcpy(out + (size_t)y * png.width, (u8 *)png.bmp_out + (size_t)y * png.pitch, png.width * 4);
+    free(png.bmp_out);
+    *w = (int)png.width;
+    *h = (int)png.height;
+    return out;
+}
+
+/* ---- audio: one thread refills the next block of a stereo port as the system reads it ---- */
+
+static u32 audio_port;
+static audioPortConfig audio_cfg;
+static sys_event_queue_t audio_queue;
+static sys_ipc_key_t audio_key;
+static sys_ppu_thread_t audio_tid;
+static volatile int audio_running;
+
+static void audio_thread(void *arg)
+{
+    (void)arg;
+    sys_event_t ev;
+    while (audio_running) {
+        u64 cur = *(volatile u64 *)(u64)audio_cfg.readIndex;
+        u32 block = (u32)((cur + 1) % audio_cfg.numBlocks);
+        float *buf = (float *)(u64)audio_cfg.audioDataStart +
+                     audio_cfg.channelCount * AUDIO_BLOCK_SAMPLES * block;
+        sysEventQueueReceive(audio_queue, &ev, 20 * 1000);
+        sound_mix(buf, AUDIO_BLOCK_SAMPLES);
+    }
+    sysThreadExit(0);
+}
+
+void plat_audio_start(void)
+{
+    audioPortParam p;
+    if (audioInit() != 0)
+        return;
+    p.numChannels = AUDIO_PORT_2CH;
+    p.numBlocks = AUDIO_BLOCK_8;
+    p.attrib = 0;
+    p.level = 1.0f;
+    if (audioPortOpen(&p, &audio_port) != 0 || audioGetPortConfig(audio_port, &audio_cfg) != 0)
+        return;
+    if (audioCreateNotifyEventQueue(&audio_queue, &audio_key) != 0)
+        return;
+    audioSetNotifyEventQueue(audio_key);
+    sysEventQueueDrain(audio_queue);
+    audioPortStart(audio_port);
+    audio_running = 1;
+    if (sysThreadCreate(&audio_tid, audio_thread, NULL, 1000, 0x8000, THREAD_JOINABLE, "minima_audio") != 0)
+        audio_running = 0;
+}
+
+static void audio_stop(void)
+{
+    if (!audio_running)
+        return;
+    u64 ret;
+    audio_running = 0;
+    sysThreadJoin(audio_tid, &ret);
+    audioPortStop(audio_port);
+    audioRemoveNotifyEventQueue(audio_key);
+    audioPortClose(audio_port);
+    sysEventQueueDestroy(audio_queue, 0);
+    audioQuit();
 }

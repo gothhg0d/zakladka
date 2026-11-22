@@ -92,6 +92,10 @@ static void on_entry(const char *name, void *user)
     if (!file_exists(a->eboot))
         return;
     strcpy(a->dir, name);
+    char icon[320];
+    snprintf(icon, sizeof icon, "%s/%s/ICON0.PNG", plat_games_dir(), name);
+    a->icon.px = plat_load_png(icon, &a->icon.w, &a->icon.h);
+    snprintf(a->pic1, sizeof a->pic1, "%s/%s/PIC1.PNG", plat_games_dir(), name);
     lib->count++;
 }
 
@@ -105,6 +109,8 @@ static int by_title(const void *x, const void *y)
 void library_scan(Library *lib, const char *skip_title_id)
 {
     ScanCtx ctx = { lib, skip_title_id };
+    for (int i = 0; i < lib->count; i++)
+        image_free(&lib->items[i].icon);
     lib->count = 0;
     plat_list_dir(plat_games_dir(), on_entry, &ctx);
     qsort(lib->items, (size_t)lib->count, sizeof(App), by_title);

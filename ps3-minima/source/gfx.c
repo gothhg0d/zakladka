@@ -1,6 +1,7 @@
 #include "gfx.h"
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 static inline uint32_t blend(uint32_t d, uint32_t s, uint32_t a) /* a: 0..256 */
@@ -10,6 +11,8 @@ static inline uint32_t blend(uint32_t d, uint32_t s, uint32_t a) /* a: 0..256 */
     uint32_t g = ((s & 0x00FF00) * a + (d & 0x00FF00) * ia) >> 8;
     return (rb & 0xFF00FF) | (g & 0x00FF00);
 }
+
+static inline float clamp01(float v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
 static inline void plot(Canvas *c, int x, int y, uint32_t col, float cov)
 {
@@ -261,4 +264,191 @@ float text_draw_fit(Canvas *c, int face, float x, float y, const char *s, uint32
         n--;
     memcpy(buf + n, ell, 4);
     return text_draw(c, face, x, y, buf, col, 0);
+}
+
+/* ---- images ---- */
+
+static inline uint32_t sample(const Image *im, float u, float v) /* bilinear, u,v in 0..1 */
+{
+    float fx = u * (float)im->w - 0.5f, fy = v * (float)im->h - 0.5f;
+    int x0 = (int)floorf(fx), y0 = (int)floorf(fy);
+    uint32_t wx = (uint32_t)((fx - (float)x0) * 256.0f), wy = (uint32_t)((fy - (float)y0) * 256.0f);
+    int x1 = x0 + 1, y1 = y0 + 1;
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 >= im->w) x1 = im->w - 1;
+    if (y1 >= im->h) y1 = im->h - 1;
+    if (x0 >= im->w) x0 = im->w - 1;
+    if (y0 >= im->h) y0 = im->h - 1;
+    uint32_t a = im->px[y0 * im->w + x0], b = im->px[y0 * im->w + x1];
+    uint32_t c = im->px[y1 * im->w + x0], d = im->px[y1 * im->w + x1];
+    uint32_t out = 0;
+    for (int sh = 0; sh < 32; sh += 8) {
+        uint32_t top = ((a >> sh & 255) * (256 - wx) + (b >> sh & 255) * wx) >> 8;
+        uint32_t bot = ((c >> sh & 255) * (256 - wx) + (d >> sh & 255) * wx) >> 8;
+        out |= ((top * (256 - wy) + bot * wy) >> 8) << sh;
+    }
+    return out;
+}
+
+static inline uint32_t lerp_px(uint32_t a, uint32_t b, uint32_t w) /* w: 0..256 */
+{
+    uint32_t iw = 256 - w;
+    uint32_t rb = (((a & 0xFF00FF) * iw + (b & 0xFF00FF) * w) >> 8) & 0xFF00FF;
+    uint32_t ag = (((a >> 8) & 0xFF00FF) * iw + ((b >> 8) & 0xFF00FF) * w) & 0xFF00FF00;
+    return rb | ag;
+}
+
+void gfx_image(Canvas *c, const Image *img, const Blit *b)
+{
+    if (!img || !img->px || b->alpha <= 0.004f || b->w < 1 || b->h < 1)
+        return;
+    /* Perspective: one edge keeps its height, the other shrinks; u is interpolated
+     * perspective-correctly so the card really looks turned, not just squeezed. */
+    float tl = b->tilt > 0 ? 1 - b->tilt * 0.22f : 1, tr = b->tilt < 0 ? 1 + b->tilt * 0.22f : 1;
+    float w = b->w * (1 - fabsf(b->tilt) * 0.12f);
+    float x0 = b->x + (b->w - w) * 0.5f, yc = b->y + b->h * 0.5f;
+    float ry0 = b->reflect ? b->y + b->h + 4 : b->y;
+    int cx0 = (int)floorf(x0), cx1 = (int)ceilf(x0 + w);
+    if (cx0 < c->cx0) cx0 = c->cx0;
+    if (cx1 > c->cx1) cx1 = c->cx1;
+
+    for (int x = cx0; x < cx1; x++) {
+        float t = ((float)x + 0.5f - x0) / w;
+        if (t < 0 || t > 1)
+            continue;
+        float hs = (1 - t) * tl + t * tr;                 /* column height scale */
+        float u = t * tr / ((1 - t) * tl + t * tr);       /* perspective-correct */
+        float colh = b->h * hs;
+        float top = b->reflect ? ry0 : yc - colh * 0.5f;
+        float span = b->reflect ? colh * 0.45f : colh;
+        int y0 = (int)floorf(top), y1 = (int)ceilf(top + span);
+        if (y0 < c->cy0) y0 = c->cy0;
+        if (y1 > c->cy1) y1 = c->cy1;
+        float edge_u = (u < 0.5f ? u : 1 - u);
+        /* column constants: horizontal source taps and weight */
+        float fx = u * (float)img->w - 0.5f;
+        int sx0 = (int)floorf(fx);
+        uint32_t wx = (uint32_t)((fx - (float)sx0) * 256.0f);
+        int sx1 = sx0 + 1;
+        if (sx0 < 0) sx0 = 0;
+        if (sx1 > img->w - 1) sx1 = img->w - 1;
+        if (sx0 > img->w - 1) sx0 = img->w - 1;
+        float shine_k = 0;
+        int do_shine = b->shine > -0.3f && b->shine < 1.3f;
+        uint32_t k256 = (uint32_t)(b->bright * 256.0f);
+        for (int y = y0; y < y1; y++) {
+            float s = ((float)y + 0.5f - top) / colh;
+            if (s < 0 || s > 1)
+                continue;
+            float v = b->reflect ? 1 - s : s;
+            float cov = 1;
+            float ex = edge_u * b->w, ey = (v < 0.5f ? v : 1 - v) * colh;
+            if (ex < b->radius && ey < b->radius) {
+                float dx = b->radius - ex, dy = b->radius - ey;
+                cov = clamp01(b->radius - sqrtf(dx * dx + dy * dy) + 0.5f);
+            } else {
+                float e = ex < ey ? ex : ey;
+                if (e < 1) cov = e + 0.5f > 1 ? 1 : e + 0.5f;
+            }
+            float fy = v * (float)img->h - 0.5f;
+            int sy0 = (int)fy;
+            if (fy < 0) { fy = 0; sy0 = 0; }
+            uint32_t wy = (uint32_t)((fy - (float)sy0) * 256.0f);
+            int sy1 = sy0 + 1 < img->h ? sy0 + 1 : img->h - 1;
+            if (sy0 > img->h - 1) sy0 = img->h - 1;
+            const uint32_t *r0 = img->px + sy0 * img->w, *r1 = img->px + sy1 * img->w;
+            uint32_t px = lerp_px(lerp_px(r0[sx0], r0[sx1], wx), lerp_px(r1[sx0], r1[sx1], wx), wy);
+            float a = cov * b->alpha * (float)(px >> 24) * (1.0f / 255.0f);
+            if (b->reflect)
+                a *= 0.22f * (1 - s / 0.45f) * (1 - s / 0.45f);
+            if (a <= 0.004f)
+                continue;
+            uint32_t k = k256;
+            if (do_shine) {
+                float d = (u + v * 0.6f) / 1.6f - b->shine;
+                shine_k = d * d * 90.0f;
+                if (shine_k < 6) k += (uint32_t)(0.55f * 256.0f * expf(-shine_k));
+            }
+            uint32_t col;
+            if (k == 256) {
+                col = px & 0xFFFFFF;
+            } else {
+                uint32_t r = ((px >> 16 & 255) * k) >> 8, g = ((px >> 8 & 255) * k) >> 8, bl = ((px & 255) * k) >> 8;
+                col = (r > 255 ? 255 : r) << 16 | (g > 255 ? 255 : g) << 8 | (bl > 255 ? 255 : bl);
+            }
+            uint32_t ai = (uint32_t)(a * 256.0f);
+            uint32_t *p = &c->px[y * c->w + x];
+            *p = ai >= 256 ? col : blend(*p, col, ai);
+        }
+    }
+}
+
+void gfx_shadow(Canvas *c, float x, float y, float w, float h, float r, float spread, float alpha)
+{
+    /* Only the ring around the box is drawn: the box itself covers the middle. */
+    const int layers = 7;
+    int sx0 = c->cx0, sy0 = c->cy0, sx1 = c->cx1, sy1 = c->cy1;
+    int ix0 = (int)(x + r), iy0 = (int)(y + r), ix1 = (int)(x + w - r), iy1 = (int)(y + h - r);
+    int bands[4][4] = { { sx0, sy0, sx1, iy0 }, { sx0, iy1, sx1, sy1 }, { sx0, iy0, ix0, iy1 }, { ix1, iy0, sx1, iy1 } };
+    for (int i = layers; i >= 1; i--) {
+        float e = spread * (float)i / layers;
+        for (int k = 0; k < 4; k++) {
+            gfx_clip(c, bands[k][0] > sx0 ? bands[k][0] : sx0, bands[k][1] > sy0 ? bands[k][1] : sy0,
+                     bands[k][2] < sx1 ? bands[k][2] : sx1, bands[k][3] < sy1 ? bands[k][3] : sy1);
+            gfx_rrect(c, x - e, y - e * 0.5f + spread * 0.35f, w + 2 * e, h + 2 * e, r + e,
+                      col_alpha(0xFF000000, alpha / layers * 1.6f));
+        }
+    }
+    c->cx0 = sx0; c->cy0 = sy0; c->cx1 = sx1; c->cy1 = sy1;
+}
+
+void gfx_backdrop(Canvas *c, const Image *img, int ox, int oy, float alpha)
+{
+    if (!img || !img->px)
+        return;
+    uint32_t a = (uint32_t)(clamp01(alpha) * 256.0f);
+    for (int y = 0; y < c->h; y++) {
+        int sy = y + oy;
+        if (sy < 0) sy = 0;
+        if (sy >= img->h) sy = img->h - 1;
+        const uint32_t *src = img->px + (size_t)sy * img->w + (ox < 0 ? 0 : ox);
+        uint32_t *dst = c->px + (size_t)y * c->w;
+        int n = c->w < img->w - ox ? c->w : img->w - ox;
+        if (a >= 256) {
+            memcpy(dst, src, (size_t)n * 4);
+        } else if (a) {
+            for (int x = 0; x < n; x++) dst[x] = blend(dst[x], src[x], a);
+        }
+    }
+}
+
+Image image_cover(const Image *src, int w, int h)
+{
+    Image out = { malloc((size_t)w * h * 4), w, h };
+    if (!out.px || !src->px)
+        return out;
+    float sa = (float)src->w / (float)src->h, da = (float)w / (float)h;
+    float uw = sa > da ? da / sa : 1, vh = sa > da ? 1 : sa / da;
+    float u0 = (1 - uw) * 0.5f, v0 = (1 - vh) * 0.5f;
+    /* averaging 2x2 bilinear taps keeps big downscales (1920 -> 1280) from aliasing */
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            float u = u0 + ((float)x + 0.5f) / (float)w * uw, v = v0 + ((float)y + 0.5f) / (float)h * vh;
+            float du = 0.25f * uw / w, dv = 0.25f * vh / h;
+            uint32_t p[4] = { sample(src, u - du, v - dv), sample(src, u + du, v - dv),
+                              sample(src, u - du, v + dv), sample(src, u + du, v + dv) };
+            uint32_t o = 0;
+            for (int sh = 0; sh < 32; sh += 8)
+                o |= (((p[0] >> sh & 255) + (p[1] >> sh & 255) + (p[2] >> sh & 255) + (p[3] >> sh & 255)) / 4) << sh;
+            out.px[y * w + x] = o;
+        }
+    return out;
+}
+
+void image_free(Image *img)
+{
+    free(img->px);
+    img->px = NULL;
+    img->w = img->h = 0;
 }

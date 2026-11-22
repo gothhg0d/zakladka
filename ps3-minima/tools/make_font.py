@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rasterize Inter into data/font.bin, the glyph atlas Minima draws text with.
+"""Rasterize AA Logotyper Rounded (with Inter as fallback) into data/font.bin, the glyph atlas Minima draws text with.
 
 Format (big-endian, read byte by byte so it works on any host):
   "MFNT" u16 face_count
@@ -19,16 +19,15 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_DIR = sys.argv[1] if len(sys.argv) > 1 else "/usr/share/fonts/opentype/inter"
+HERE = os.path.dirname(os.path.abspath(__file__))
+MAIN = os.path.join(HERE, "..", "fonts", "AALogotyperRounded.otf")
+# Inter fills in the few characters AA Logotyper Rounded doesn't have.
+FALLBACK_DIR = sys.argv[1] if len(sys.argv) > 1 else "/usr/share/fonts/opentype/inter"
+FALLBACK = os.path.join(FALLBACK_DIR, "Inter-Medium.otf")
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "font.bin")
 
 # slot -> (file, size in px at 720p). Must match the FACE_* enum in source/font.h.
-FACES = [
-    ("Inter-Medium.otf", 13),     # FACE_LABEL: tracked uppercase captions
-    ("Inter-Regular.otf", 16),    # FACE_SMALL: details, hints
-    ("Inter-Light.otf", 24),      # FACE_BODY: list rows
-    ("Inter-ExtraLight.otf", 40), # FACE_TITLE: clock, dialog titles, monogram
-]
+FACES = [14, 17, 22, 34, 60]  # FACE_LABEL, FACE_SMALL, FACE_BODY, FACE_TITLE, FACE_HERO
 SCALES = [100, 150]  # 720p and 1080p
 
 CHARS = set(range(0x20, 0x7F)) | set(range(0xA0, 0x100)) | set(range(0x400, 0x460))
@@ -36,14 +35,31 @@ CHARS |= {0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026,
           0x2039, 0x203A, 0x2122, 0x2190, 0x2192, 0x00D7, 0x2116}
 
 
-def build_face(slot, path, px):
-    font = ImageFont.truetype(path, px)
-    ascent, descent = font.getmetrics()
+def has(font, ch, notdef=None):
+    if ch == " ":
+        return True
+    m = font.getmask(ch)
+    if m.getbbox() is None:
+        return False
+    # Some fonts draw a visible "missing glyph" box instead of nothing; compare against it.
+    return notdef is None or bytes(m) != notdef
+
+
+def notdef_of(font):
+    return bytes(font.getmask("\uE000"))
+
+
+def build_face(px):
+    main = ImageFont.truetype(MAIN, px)
+    fallback = ImageFont.truetype(FALLBACK, int(px * 0.92))
+    nd = notdef_of(main)
+    ascent, descent = main.getmetrics()
     glyphs, blob = [], bytearray()
     for cp in sorted(CHARS):
         ch = chr(cp)
-        if cp != 0x20 and font.getmask(ch).getbbox() is None:
-            continue  # glyph missing (or blank) in this font
+        font = main if has(main, ch, nd) else fallback
+        if not has(font, ch):
+            continue
         adv = font.getlength(ch)
         l, t, r, b = font.getbbox(ch, anchor="ls")
         w, h = max(0, r - l), max(0, b - t)
@@ -61,9 +77,9 @@ def main():
     out += struct.pack(">H", len(FACES) * len(SCALES))
     total = 0
     for scale in SCALES:
-        for slot, (fname, size) in enumerate(FACES):
+        for slot, size in enumerate(FACES):
             px = int(round(size * scale / 100))
-            ascent, descent, glyphs, blob = build_face(slot, os.path.join(FONT_DIR, fname), px)
+            ascent, descent, glyphs, blob = build_face(px)
             line_h = int(round(px * 1.25))
             out += struct.pack(">HHhhhHI", slot, scale, ascent, descent, line_h, len(glyphs), len(blob))
             for cp, l, t, w, h, adv, off in glyphs:
